@@ -27,7 +27,7 @@ class CVisualLocalizationCore(metaclass=ABCMeta):
         print("Visual Localization Core Read")
 
     @abstractmethod
-    def Control(self):
+    def Setting(self):
         print("Visual Localization Core Control")
 
     @abstractmethod
