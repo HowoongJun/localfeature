@@ -2,9 +2,11 @@
 import imp
 import tensorflow.compat.v1 as tf
 from tensorflow.python.util import deprecation
+from lcore.hal import *
+import common.Log as log
 deprecation._PRINT_DEPRECATION_WARNINGS = False
 
-class CVisualLocLocal():
+class CVisualLocLocal(CVisualLocalizationCore):
     def __init__(self, model):
         if(tf.config.experimental.list_physical_devices('GPU')):
             self.__gpuCheck = True
@@ -16,6 +18,9 @@ class CVisualLocLocal():
         elif model == "superpoint":
             print("Model: SuperPoint")
             self.__module = imp.load_source(model, "./localfeature_ref/superpoint/superpoint.py")
+        elif model == "eventpointnet":
+            log.DebugPrint().info("Model: EventPointNet")
+            self.__module = imp.load_source(model, "./EventPointNet/eventpointnet.py")
 
     def __del__(self):
         self.Close()
@@ -33,7 +38,7 @@ class CVisualLocLocal():
     def Write(self):
         self.__model.Write()
 
-    def Control(self, oImage):
+    def Setting(self, oImage):
         self.__image = oImage
         self.__model.Control(oImage = self.__image)
 
