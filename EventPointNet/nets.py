@@ -1,8 +1,8 @@
 import torch
 
-class CBaseNetwork(torch.nn.Module):
+class CEventPointNet(torch.nn.Module):
     def __init__(self):
-        super(CBaseNetwork, self).__init__()
+        super(CEventPointNet, self).__init__()
         self.relu = torch.nn.ReLU(inplace=True)
         self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2)
         self.conv1_1 = torch.nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1)

@@ -17,7 +17,7 @@ class CModel(CVisualLocalizationCore):
     def Write(self):
         oTrain = train.CTrain()
         oTrain.Setting()
-        oTrain.run(100)
+        oTrain.run()
 
     def Read(self):
         print("CEventPointNet Read!")
