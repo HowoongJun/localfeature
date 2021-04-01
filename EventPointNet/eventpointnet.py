@@ -14,8 +14,9 @@ class CModel(CVisualLocalizationCore):
     def Close(self):
         print("CEventPointNet Close!")
 
-    def Write(self):
+    def Write(self, db, dbPath):
         oTrain = train.CTrain()
+        oTrain.Open(db=db, dbPath=dbPath)
         oTrain.Setting()
         oTrain.run()
 

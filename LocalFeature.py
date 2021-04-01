@@ -1,14 +1,12 @@
 # Main class for visual localization local
 import imp
-import tensorflow.compat.v1 as tf
-from tensorflow.python.util import deprecation
 from lcore.hal import *
 import common.Log as log
-deprecation._PRINT_DEPRECATION_WARNINGS = False
+import torch
 
 class CVisualLocLocal(CVisualLocalizationCore):
     def __init__(self, model):
-        if(tf.config.experimental.list_physical_devices('GPU')):
+        if(torch.cuda.is_available()):
             self.__gpuCheck = True
         else:
             self.__gpuCheck = False
@@ -35,12 +33,12 @@ class CVisualLocLocal(CVisualLocalizationCore):
     def Read(self):
         return self.__model.Read()
 
-    def Write(self):
-        self.__model.Write()
+    def Write(self, db, dbPath):
+        self.__model.Write(db, dbPath)
 
     def Setting(self, oImage):
         self.__image = oImage
-        self.__model.Control(oImage = self.__image)
+        self.__model.Setting(oImage = self.__image)
 
     def Reset(self):
         self.__model.Reset()

@@ -15,8 +15,8 @@ parser.add_argument('--resize', '--z', default='[1280,720]', dest='resize',
                     help='Resize image [width,height] (default = [1280,720]')
 parser.add_argument('--channel', '--c', type=int, default=3, dest='channel',
                     help='Image channel (default = 3)')
-parser.add_argument('--mode', '--o', type=str, dsst='mode',
-                    help='Mode select: makedb, query, match')
+parser.add_argument('--mode', '--o', type=str, dest='mode',
+                    help='Mode select: makedb, query, match, train')
 
 args = parser.parse_args()
 
@@ -45,14 +45,17 @@ if __name__ == "__main__":
 
     model = CVisualLocLocal(strModel)
     model.Open()
-    model.Setting(eSettingCmd.eSettingCmd_IMAGE_CHANNEL, args.channel)
-    model.Setting(eSettingCmd.eSettingCmd_CONFIG, checkGPU())
+    # model.Setting(eSettingCmd.eSettingCmd_IMAGE_CHANNEL, args.channel)
+    # model.Setting(eSettingCmd.eSettingCmd_CONFIG, checkGPU())
     if(args.mode == "makedb"):
         log.DebugPrint().info("[Local] DB Creation Mode")
     elif(args.mode == "query"):
         log.DebugPrint().info("[Local] Query Mode")
     elif(args.mode == "match"):
         log.DebugPrint().info("[Local] Matching Mode")
+    elif(args.mode == "train"):
+        log.DebugPrint().info("[Local] Train Mode")
+        model.Write("MVSEC", "/root/Workspace/dataset_eventcam/MVSEC/night/left/")
     else:
         log.DebugPrint().error("[Local] Wrong mode! Please check the mode again")
     # strImgPath = "./test.png"
