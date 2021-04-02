@@ -17,6 +17,8 @@ parser.add_argument('--channel', '--c', type=int, default=3, dest='channel',
                     help='Image channel (default = 3)')
 parser.add_argument('--mode', '--o', type=str, dest='mode',
                     help='Mode select: makedb, query, match, train')
+parser.add_argument('--query', '--q', type=str, dest='query',
+                    help='Image query file path')
 
 args = parser.parse_args()
 
@@ -32,6 +34,31 @@ def imageRead(strImgPath):
     oImgResize = cv2.resize(oImage, dsize=(iWidth, iHeight), interpolation = cv2.INTER_LINEAR)
     return oImgResize
 
+def readFolder(strImgFolder):
+    if(not os.path.isdir(strImgFolder)):
+        log.DebugPrint().warning("Path does not exist!")
+        return False
+    strPngList = [os.path.basename(x) for x in glob(strImgFolder + "*.png")]
+    strJpgList = [os.path.basename(x) for x in glob(strImgFolder + "*.jpg")]
+    strFileList = strPngList + strJpgList
+    strFileList.sort()
+    return strFileList
+
+def queryCheck(oModel):
+    if(args.query == None):
+        log.DebugPrint().error("No query path")
+        return False
+    strFileList = readFolder(args.query)
+    if(strFileList is False):
+        return False
+    for fileIdx in strFileList:
+        strImgPath = args.query + '/' + fileIdx
+        oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, imageRead(strImgPath))
+        vResult = oModel.Read()
+        print(vResult)
+        oModel.Reset()
+    return True
+
 def checkGPU():
     if(torch.cuda.is_available()):
         log.DebugPrint().info("Using GPU.." + str(torch.cuda.get_device_name(torch.cuda.current_device())))
@@ -45,12 +72,13 @@ if __name__ == "__main__":
 
     model = CVisualLocLocal(strModel)
     model.Open()
-    # model.Setting(eSettingCmd.eSettingCmd_IMAGE_CHANNEL, args.channel)
+    model.Setting(eSettingCmd.eSettingCmd_IMAGE_CHANNEL, args.channel)
     # model.Setting(eSettingCmd.eSettingCmd_CONFIG, checkGPU())
     if(args.mode == "makedb"):
         log.DebugPrint().info("[Local] DB Creation Mode")
     elif(args.mode == "query"):
         log.DebugPrint().info("[Local] Query Mode")
+        queryCheck(model)
     elif(args.mode == "match"):
         log.DebugPrint().info("[Local] Matching Mode")
     elif(args.mode == "train"):

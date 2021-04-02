@@ -36,9 +36,8 @@ class CVisualLocLocal(CVisualLocalizationCore):
     def Write(self, db, dbPath):
         self.__model.Write(db, dbPath)
 
-    def Setting(self, oImage):
-        self.__image = oImage
-        self.__model.Setting(oImage = self.__image)
+    def Setting(self, eCommand:int, Value=None):
+        self.__model.Setting(eCommand, Value)
 
     def Reset(self):
         self.__model.Reset()
