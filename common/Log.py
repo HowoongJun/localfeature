@@ -25,4 +25,10 @@ def DebugPrint(logger = None):
     oLogger.addHandler(hConsole)
     oLogger.addHandler(hFileHandler)
 
+    pilLogger = logging.getLogger('PIL')
+    pilLogger.setLevel(logging.INFO)
+
+    matplotLogger = logging.getLogger('matplotlib')
+    matplotLogger.setLevel(logging.INFO)
+
     return oLogger
