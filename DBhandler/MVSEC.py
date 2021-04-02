@@ -24,7 +24,7 @@ class CDataset(Dataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        npyData = np.load(self.__dataPath + self.__dataList[idx])
+        npyData = np.load(self.__dataPath + self.__dataList[idx - 1])
         
         image = io.imread(self.__trainPath + str(npyData['image']))
         image = resize(image, (256,344))

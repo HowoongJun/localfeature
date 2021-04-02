@@ -16,5 +16,5 @@ class CDbHandler():
         return True
     
     def Read(self, batch_size, shuffle=True):
-        self.__dataLoader = DataLoader(self.__Dataset, batch_size=batch_size, shuffle=shuffle)
+        self.__dataLoader = DataLoader(self.__Dataset, batch_size=batch_size, shuffle=shuffle, drop_last=True)
         return self.__dataLoader
