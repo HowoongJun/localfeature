@@ -16,8 +16,7 @@ class CModel(CVisualLocalizationCore):
         self.__gpuCheck = bGPUFlag
         self.__device = "cuda" if self.__gpuCheck else "cpu"
         self.__oQueryModel = nets.CEventPointNet().to(self.__device)
-        self.__oQueryModel.load_state_dict(torch.load("./checkpoints/checkpoint.pth"))
-        self.__oQueryModel.eval()
+        self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint.pth"))
         DebugPrint().info("Load Model Completed!")
 
     def Close(self):
@@ -30,8 +29,10 @@ class CModel(CVisualLocalizationCore):
         oTrain.run()
 
     def Read(self):
-        kp, desc = self.__oQueryModel.forward(self.__Image)
-        return kp, desc
+        with torch.no_grad():
+            self.__oQueryModel.eval()
+            kp, desc = self.__oQueryModel.forward(self.__Image)
+            return kp, desc
 
     def Setting(self, eCommand:int, Value=None):
         SetCmd = eSettingCmd(eCommand)
@@ -43,4 +44,5 @@ class CModel(CVisualLocalizationCore):
             self.__channel = np.uint8(Value)
 
     def Reset(self):
-        print("CEventPointNet Reset!")
+        self.__Image = None
+        self.__channel = None

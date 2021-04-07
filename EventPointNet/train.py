@@ -7,12 +7,12 @@ import DBhandler.DBhandler as DBhandler
 import numpy as np
 
 class CTrain():
-    def __init__(self, learningRate = 0.001):
+    def __init__(self, learningRate = 0.1):
         self.__device = "cuda" if torch.cuda.is_available() else "cpu"
         self.__learningRate = learningRate
         self.__sPrintStep = 100
         self.__batch_size = 4
-        self.__strCkptPath = "./checkpoints"
+        self.__strCkptPath = ".EventPointNet/checkpoints"
         if(not os.path.exists(self.__strCkptPath)):
             os.mkdir(self.__strCkptPath)
     
@@ -20,7 +20,7 @@ class CTrain():
         self.__dbHandler = DBhandler.CDbHandler(db)
         self.__dbHandler.Open(dbPath)
         self.__train_loader = self.__dbHandler.Read(batch_size=self.__batch_size)
-        
+       
     def run(self):
         self.__train()
     
@@ -38,9 +38,6 @@ class CTrain():
 
             self.__model.zero_grad()
             output, _ = self.__model.forward(image)
-            # dense = torch.exp(output)
-            # dense = dense / (torch.sum(output, axis=1) + 0.00001)
-            output = output[:,:-1,:]
             output = torch.reshape(output, (self.__batch_size, 1, 256, 344))
             ouptut = output.detach().cpu()
             

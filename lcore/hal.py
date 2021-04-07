@@ -7,7 +7,7 @@ class eSettingCmd(IntEnum):
     eSettingCmd_IMAGE_DATA = 2
     eSettingCmd_IMAGE_CHANNEL = 3
     eSettingCmd_CONFIG = 4
-    eSettingCmd_GEM = 100
+    
     
 class CVisualLocalizationCore(metaclass=ABCMeta):
     @abstractmethod

@@ -1,7 +1,9 @@
 # Testing code for local feature
 from LocalFeature import *
 from lcore.hal import eSettingCmd
-import sys, os, cv2
+import sys, os
+from skimage import io
+from skimage.transform import resize
 import argparse
 from glob import glob
 import torch
@@ -19,20 +21,24 @@ parser.add_argument('--mode', '--o', type=str, dest='mode',
                     help='Mode select: makedb, query, match, train')
 parser.add_argument('--query', '--q', type=str, dest='query',
                     help='Image query file path')
+parser.add_argument('--db', '--d', type=str, dest='db', default=None,
+                    help='DB path for training')
 
 args = parser.parse_args()
 
 def imageRead(strImgPath):
-    oImage = cv2.imread(strImgPath)
+    oImage = io.imread(strImgPath)
     if(oImage is None):
         return False
-    lResize = list(eval(args.resize))
-    iWidth = lResize[0]
-    iHeight = lResize[1]
-    if(args.channel == 1):
-        oImage = cv2.cvtColor(oImage, cv2.COLOR_BGR2GRAY)
-    oImgResize = cv2.resize(oImage, dsize=(iWidth, iHeight), interpolation = cv2.INTER_LINEAR)
-    return oImgResize
+    if(len(oImage.shape) < 3):
+        oImage = np.expand_dims(np.asarray(oImage), axis=0)
+    # lResize = list(eval(args.resize))
+    # iWidth = lResize[0]
+    # iHeight = lResize[1]
+    # if(args.channel == 1):
+    #     oImage = cv2.cvtColor(oImage, cv2.COLOR_BGR2GRAY)
+    # oImgResize = resize(oImage, (iWidth, iHeight))
+    return oImage
 
 def readFolder(strImgFolder):
     if(not os.path.isdir(strImgFolder)):
@@ -54,8 +60,23 @@ def queryCheck(oModel):
     for fileIdx in strFileList:
         strImgPath = args.query + '/' + fileIdx
         oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, imageRead(strImgPath))
-        vResult = oModel.Read()
-        print(vResult)
+        vKpt, vDesc = oModel.Read()
+        print(vKpt)
+        heatmap = vKpt.cpu().detach().numpy()
+        heatmap = np.squeeze(heatmap, axis=0)
+        heatmap = np.squeeze(heatmap, axis=0)
+        xs, ys = np.where(heatmap >= 0.015)
+        a = imageRead(strImgPath)
+
+        for k in range(0, len(xs)):
+            a[0, xs[k], ys[k]] = 255
+        # pts = np.zeros((3, len(xs)))
+        # pts[0, :] = ys
+        # pts[1, :] = xs
+        # pts[2, :] = heatmap[xs, ys]
+        # a = np.squeeze(a, axis=0)
+        # io.imsave("./" + str(fileIdx) + ".png", a)
+        io.imsave("./" + str(fileIdx) + ".png", heatmap * 255)
         oModel.Reset()
     return True
 
@@ -83,17 +104,9 @@ if __name__ == "__main__":
         log.DebugPrint().info("[Local] Matching Mode")
     elif(args.mode == "train"):
         log.DebugPrint().info("[Local] Train Mode")
-        model.Write("MVSEC", "/root/Workspace/dataset_eventcam/MVSEC/night/left/")
+        if(args.db == None):
+            log.DebugPrint().error("[Local] No DB Path for Training!")
+            sys.exit()
+        model.Write("MVSEC", args.db)
     else:
         log.DebugPrint().error("[Local] Wrong mode! Please check the mode again")
-    # strImgPath = "./test.png"
-    # img = cv2.imread(strImgPath)
-    # if(img is None):
-        # print("No Image!")
-        # sys.quit()
-    # iWidth = 1280
-    # iHeight = 720
-    # img = cv2.resize(img, dsize = (iWidth, iHeight), interpolation = cv2.INTER_LINEAR)
-    # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # model.Control(img)
-    # print(model.Read())
