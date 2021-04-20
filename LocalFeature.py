@@ -23,9 +23,9 @@ class CVisualLocLocal(CVisualLocalizationCore):
     def __del__(self):
         self.Close()
 
-    def Open(self):
+    def Open(self, argsmode):
         self.__model = self.__module.CModel()
-        self.__model.Open(self.__gpuCheck)
+        self.__model.Open(self.__gpuCheck, argsmode)
     
     def Close(self):
         self.__model.Close()

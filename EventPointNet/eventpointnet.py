@@ -7,17 +7,18 @@ from common.Log import DebugPrint
 
 class CModel(CVisualLocalizationCore):
     def __init__(self):
-        print("CEventPointNet Constructor!")
+        self.softmax = torch.nn.Softmax2d()
 
     def __del__(self):
         print("CEventPointNet Destructor!")
 
-    def Open(self, bGPUFlag):
+    def Open(self, bGPUFlag, argsmode):
         self.__gpuCheck = bGPUFlag
         self.__device = "cuda" if self.__gpuCheck else "cpu"
         self.__oQueryModel = nets.CEventPointNet().to(self.__device)
-        self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint.pth"))
-        DebugPrint().info("Load Model Completed!")
+        if(argsmode == 'query'):
+            self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint.pth"))
+            DebugPrint().info("Load Model Completed!")
 
     def Close(self):
         print("CEventPointNet Close!")
@@ -31,8 +32,12 @@ class CModel(CVisualLocalizationCore):
     def Read(self):
         with torch.no_grad():
             self.__oQueryModel.eval()
-            kp, desc = self.__oQueryModel.forward(self.__Image)
-            return kp, desc
+            kpt, desc = self.__oQueryModel.forward(self.__Image)
+            kpt = self.softmax(kpt)
+            kpt = kpt[:,:-1,:]
+            kpt = torch.nn.functional.pixel_shuffle(kpt, 8)
+            kpt = kpt.data.cpu().numpy()
+            return kpt, desc
 
     def Setting(self, eCommand:int, Value=None):
         SetCmd = eSettingCmd(eCommand)

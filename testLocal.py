@@ -61,11 +61,10 @@ def queryCheck(oModel):
         strImgPath = args.query + '/' + fileIdx
         oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, imageRead(strImgPath))
         vKpt, vDesc = oModel.Read()
-        print(vKpt)
-        heatmap = vKpt.cpu().detach().numpy()
+        
+        heatmap = np.squeeze(vKpt, axis=0)
         heatmap = np.squeeze(heatmap, axis=0)
-        heatmap = np.squeeze(heatmap, axis=0)
-        xs, ys = np.where(heatmap >= 0.015)
+        xs, ys = np.where(heatmap >= 0.0154)
         a = imageRead(strImgPath)
 
         for k in range(0, len(xs)):
@@ -74,9 +73,9 @@ def queryCheck(oModel):
         # pts[0, :] = ys
         # pts[1, :] = xs
         # pts[2, :] = heatmap[xs, ys]
-        # a = np.squeeze(a, axis=0)
-        # io.imsave("./" + str(fileIdx) + ".png", a)
-        io.imsave("./" + str(fileIdx) + ".png", heatmap * 255)
+        a = np.squeeze(a, axis=0)
+        io.imsave("./" + str(fileIdx) + ".png", a)
+        # io.imsave("./" + str(fileIdx) + ".png", heatmap * 255)
         oModel.Reset()
     return True
 
@@ -92,7 +91,7 @@ if __name__ == "__main__":
     strModel = args.model
 
     model = CVisualLocLocal(strModel)
-    model.Open()
+    model.Open(args.mode)
     model.Setting(eSettingCmd.eSettingCmd_IMAGE_CHANNEL, args.channel)
     # model.Setting(eSettingCmd.eSettingCmd_CONFIG, checkGPU())
     if(args.mode == "makedb"):

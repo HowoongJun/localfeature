@@ -28,14 +28,12 @@ class CDataset(Dataset):
             print("Maximum")
             idx = len(self.__dataList) - 1
         npyData = np.load(self.__dataPath + self.__dataList[idx])
-        
+
         image = io.imread(self.__trainPath + str(npyData['image']))
-        image = resize(image, (256,344))
         image = np.expand_dims(image, axis=0)
         
         # target = io.imread(self.__targetPath + self.__targetList)
         target = npyData['siftkptbinary']
-        target = resize(target, (256,344))
         target = np.expand_dims(target, axis=0)
 
         result = {'image': image, 'target': target}

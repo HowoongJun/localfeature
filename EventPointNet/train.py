@@ -7,12 +7,12 @@ import DBhandler.DBhandler as DBhandler
 import numpy as np
 
 class CTrain():
-    def __init__(self, learningRate = 0.1):
+    def __init__(self, learningRate = 0.001):
         self.__device = "cuda" if torch.cuda.is_available() else "cpu"
         self.__learningRate = learningRate
         self.__sPrintStep = 100
         self.__batch_size = 4
-        self.__strCkptPath = ".EventPointNet/checkpoints"
+        self.__strCkptPath = "./EventPointNet/checkpoints"
         if(not os.path.exists(self.__strCkptPath)):
             os.mkdir(self.__strCkptPath)
     
@@ -26,28 +26,27 @@ class CTrain():
     
     def Setting(self):
         self.__model = nets.CEventPointNet().to(self.__device)
-        self.__loss = torch.nn.CrossEntropyLoss()
+        # self.__loss = torch.nn.CrossEntropyLoss()
+        self.__loss = torch.nn.MSELoss()
         self.__optimizer = torch.optim.Adam(self.__model.parameters(), lr = self.__learningRate)
 
     def __train(self):
-        self.__model.train()
+        self.__model.train(True)
         
         sTrainIdx = 0
         for sBatch, data in enumerate(self.__train_loader):
-            image, target = data['image'].to(self.__device, dtype=torch.float), data['target'].to(self.__device, dtype=torch.long)
+            image, target = data['image'].to(self.__device, dtype=torch.float32), data['target'].to(self.__device, dtype=torch.float32)
 
             self.__model.zero_grad()
             output, _ = self.__model.forward(image)
-            output = torch.reshape(output, (self.__batch_size, 1, 256, 344))
-            ouptut = output.detach().cpu()
-            
-            target = target.squeeze(1)
+            output = output[:, :-1, :]
+            output = torch.nn.functional.pixel_shuffle(output, 8)
+
             loss = self.__loss(output, target)
             loss.backward()
-            
             self.__optimizer.step()
             if sTrainIdx % self.__sPrintStep == 0:
-                DebugPrint().info("Step: " + str(sTrainIdx) + ", Loss: " + str(loss))
+                DebugPrint().info("Step: " + str(sTrainIdx) + ", Loss: " + str(loss.item()))
             sTrainIdx += 1
         sTrainIdx = 0
         torch.save(self.__model.state_dict(), self.__strCkptPath + "/checkpoint.pth")

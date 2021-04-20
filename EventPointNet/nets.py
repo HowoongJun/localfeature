@@ -5,7 +5,7 @@ class CEventPointNet(torch.nn.Module):
         super(CEventPointNet, self).__init__()
         self.relu = torch.nn.ReLU(inplace=True)
         self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2)
-        self.softmax = torch.nn.Softmax2d()
+        
         self.conv1_1 = torch.nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1)
         self.conv1_2 = torch.nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
         self.conv2_1 = torch.nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
@@ -36,9 +36,6 @@ class CEventPointNet(torch.nn.Module):
 
         kpt = self.relu(self.convKp1(x))
         kpt = self.convKp2(kpt)
-        kpt = self.softmax(kpt)
-        kpt = kpt[:,:-1,:]
-        kpt = torch.nn.functional.pixel_shuffle(kpt, 8)
 
         desc = self.relu(self.convDsc1(x))
         desc = self.convDsc2(desc)
