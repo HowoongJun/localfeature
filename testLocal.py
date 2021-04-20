@@ -64,18 +64,17 @@ def queryCheck(oModel):
         
         heatmap = np.squeeze(vKpt, axis=0)
         heatmap = np.squeeze(heatmap, axis=0)
-        xs, ys = np.where(heatmap >= 0.0154)
+        heatmap_aligned = heatmap.reshape(-1)
+        heatmap_aligned = np.sort(heatmap_aligned)[::-1]
+
+        xs, ys = np.where(heatmap >= heatmap_aligned[2000])
         a = imageRead(strImgPath)
 
         for k in range(0, len(xs)):
             a[0, xs[k], ys[k]] = 255
-        # pts = np.zeros((3, len(xs)))
-        # pts[0, :] = ys
-        # pts[1, :] = xs
-        # pts[2, :] = heatmap[xs, ys]
+
         a = np.squeeze(a, axis=0)
         io.imsave("./" + str(fileIdx) + ".png", a)
-        # io.imsave("./" + str(fileIdx) + ".png", heatmap * 255)
         oModel.Reset()
     return True
 

@@ -32,7 +32,6 @@ class CDataset(Dataset):
         image = io.imread(self.__trainPath + str(npyData['image']))
         image = np.expand_dims(image, axis=0)
         
-        # target = io.imread(self.__targetPath + self.__targetList)
         target = npyData['siftkptbinary']
         target = np.expand_dims(target, axis=0)
 
