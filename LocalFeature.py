@@ -30,8 +30,8 @@ class CVisualLocLocal(CVisualLocalizationCore):
     def Close(self):
         self.__model.Close()
 
-    def Read(self):
-        return self.__model.Read()
+    def Read(self, threshold):
+        return self.__model.Read(threshold)
 
     def Write(self, db, dbPath):
         self.__model.Write(db, dbPath)
