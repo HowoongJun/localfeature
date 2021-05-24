@@ -8,6 +8,7 @@ from common.Log import DebugPrint
 class CModel(CVisualLocalizationCore):
     def __init__(self):
         self.softmax = torch.nn.Softmax2d()
+        self.__threshold = 3000
 
     def __del__(self):
         print("CEventPointNet Destructor!")
@@ -30,7 +31,7 @@ class CModel(CVisualLocalizationCore):
         oTrain.Setting()
         oTrain.run()
 
-    def Read(self, threshold):
+    def Read(self):
         with torch.no_grad():
             self.__oQueryModel.eval()
             kptDist, _ = self.__oQueryModel.forward(self.__Image)
@@ -38,7 +39,8 @@ class CModel(CVisualLocalizationCore):
             kptDist = kptDist[:,:-1,:]
             kptDist = torch.nn.functional.pixel_shuffle(kptDist, 8)
             kptDist = kptDist.data.cpu().numpy()
-            kpt, desc = self.__GenerateLocalFeature(kptDist, threshold)
+            DebugPrint().info("Generate Local Feature, Threshold: " + str(self.__threshold))
+            kpt, desc = self.__GenerateLocalFeature(kptDist, self.__threshold)
             return kpt, desc
 
     def Setting(self, eCommand:int, Value=None):
@@ -50,6 +52,8 @@ class CModel(CVisualLocalizationCore):
             self.__Image = torch.from_numpy(self.__Image).to(self.__device, dtype=torch.float)
         elif(SetCmd == eSettingCmd.eSettingCmd_IMAGE_CHANNEL):
             self.__channel = np.uint8(Value)
+        elif(SetCmd == eSettingCmd.eSettingCmd_THRESHOLD):
+            self.__threshold = np.uint16(Value)
 
     def Reset(self):
         self.__Image = None

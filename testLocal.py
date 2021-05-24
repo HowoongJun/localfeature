@@ -12,7 +12,7 @@ import numpy as np
 
 parser = argparse.ArgumentParser(description='Test Local Feature')
 parser.add_argument('--model', '--m', type=str, default='mymodule', dest='model',
-                    help='Model select: mymodule, superpoint, eventpointnet')
+                    help='Model select: mymodule, superpoint, eventpointnet, sift, orb')
 parser.add_argument('--resize', '--z', default='[1280,720]', dest='resize',
                     help='Resize image [width,height] (default = [1280,720]')
 parser.add_argument('--channel', '--c', type=int, default=3, dest='channel',
@@ -63,26 +63,13 @@ def queryCheck(oModel):
         return False
     for fileIdx in strFileList:
         strImgPath = args.query + '/' + fileIdx
-        oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, imageRead(strImgPath))
-        vKpt, vDesc = oModel.Read(args.threshold)
-        oImgKpt = np.squeeze(imageRead(strImgPath), axis=0)
-        oImgKpt = cv2.drawKeypoints(oImgKpt, vKpt, None)
-        cv2.imwrite("./KptResult" + str(fileIdx), oImgKpt)
-        # heatmap = np.squeeze(vKpt, axis=0)
-        # heatmap = np.squeeze(heatmap, axis=0)
-        # heatmap_aligned = heatmap.reshape(-1)
-        # heatmap_aligned = np.sort(heatmap_aligned)[::-1]
-        
-        # imHeatmap = ((heatmap - np.min(heatmap)) * 255 / (np.max(heatmap) - np.min(heatmap))).astype(np.uint8)
-        # io.imsave("./heatmap" + str(fileIdx), imHeatmap)
-        # xs, ys = np.where(heatmap >= heatmap_aligned[3000])
-        # a = imageRead(strImgPath)
-        
-        # for k in range(0, len(xs)):
-        #     a[0, xs[k], ys[k]] = 255
-
-        # a = np.squeeze(a, axis=0)
-        # io.imsave("./" + str(fileIdx) + ".png", a)
+        oImage = imageRead(strImgPath)
+        oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImage)
+        vKpt, vDesc = oModel.Read()
+        oQuery = dict(image=oImage, keypoint=vKpt, descriptor=vDesc)
+        oKptHandler = CKeypointHandler(args.mode, oQuery)
+        oKptHandler.Save("./KptResult_" + str(fileIdx))
+        oKptHandler.Reset()
         oModel.Reset()
     return True
 
@@ -105,18 +92,17 @@ def featureMatching(oModel):
     oImgMatch = imageRead(args.match)
 
     oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImgQuery)
-    vKptQuery, vDescQuery = oModel.Read(args.threshold)
+    vKptQuery, vDescQuery = oModel.Read()
+    oQuery = dict(image=oImgQuery, keypoint=vKptQuery, descriptor=vDescQuery)
     oModel.Reset()
     oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImgMatch)
-    vKptMatch, vDescMatch = oModel.Read(args.threshold)
+    vKptMatch, vDescMatch = oModel.Read()
+    oMatch = dict(image=oImgMatch, keypoint=vKptMatch, descriptor=vDescMatch)
     oModel.Reset()
-    oImgQuery = np.squeeze(oImgQuery, axis=0)
-    oImgMatch = np.squeeze(oImgMatch, axis=0)
-    oBfMatcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
-    vMatches = oBfMatcher.match(vDescQuery, vDescMatch)
-    oImgResult = cv2.drawMatches(oImgQuery, vKptQuery, oImgMatch, vKptMatch, vMatches, None, flags=cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS)
 
-    cv2.imwrite("./MatchedResult.png", oImgResult)
+    oKptMatcher = CKeypointHandler(args.mode, oQuery, oMatch)
+    oKptMatcher.Matching("bruteforce", ransac=100.0)
+    oKptMatcher.Save("./MatchedResult_" + str(args.model) + ".png")
 
 if __name__ == "__main__":
     strModel = args.model
@@ -124,14 +110,15 @@ if __name__ == "__main__":
     model = CVisualLocLocal(strModel)
     model.Open(args.mode)
     model.Setting(eSettingCmd.eSettingCmd_IMAGE_CHANNEL, args.channel)
-    # model.Setting(eSettingCmd.eSettingCmd_CONFIG, checkGPU())
     if(args.mode == "makedb"):
         log.DebugPrint().info("[Local] DB Creation Mode")
     elif(args.mode == "query"):
         log.DebugPrint().info("[Local] Query Mode")
+        model.Setting(eSettingCmd.eSettingCmd_THRESHOLD, args.threshold)
         queryCheck(model)
     elif(args.mode == "match"):
         log.DebugPrint().info("[Local] Matching Mode")
+        model.Setting(eSettingCmd.eSettingCmd_THRESHOLD, args.threshold)
         featureMatching(model)
     elif(args.mode == "train"):
         log.DebugPrint().info("[Local] Train Mode")
