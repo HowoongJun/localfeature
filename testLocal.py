@@ -45,8 +45,8 @@ def readFolder(strImgFolder):
     if(not os.path.isdir(strImgFolder)):
         log.DebugPrint().warning("Path does not exist!")
         return False
-    strPngList = [os.path.basename(x) for x in glob(strImgFolder + "*.png")]
-    strJpgList = [os.path.basename(x) for x in glob(strImgFolder + "*.jpg")]
+    strPngList = [x for x in glob(strImgFolder + "*.png")]
+    strJpgList = [x for x in glob(strImgFolder + "*.jpg")]
     strFileList = strPngList + strJpgList
     strFileList.sort()
     return strFileList
@@ -62,13 +62,13 @@ def queryCheck(oModel):
     if(strFileList is False):
         return False
     for fileIdx in strFileList:
-        strImgPath = args.query + '/' + fileIdx
+        strImgPath = fileIdx
         oImage = imageRead(strImgPath)
         oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImage)
         vKpt, vDesc = oModel.Read()
         oQuery = dict(image=oImage, keypoint=vKpt, descriptor=vDesc)
         oKptHandler = CKeypointHandler(args.mode, oQuery)
-        oKptHandler.Save("./KptResult_" + str(fileIdx))
+        oKptHandler.Save("./result/KptResult_" + str(args.model) + "_" + str(os.path.basename(fileIdx)))
         oKptHandler.Reset()
         oModel.Reset()
     return True
@@ -101,8 +101,9 @@ def featureMatching(oModel):
     oModel.Reset()
 
     oKptMatcher = CKeypointHandler(args.mode, oQuery, oMatch)
-    oKptMatcher.Matching("bruteforce", ransac=100.0)
-    oKptMatcher.Save("./MatchedResult_" + str(args.model) + ".png")
+    oKptMatcher.Matching("bruteforce", args.model, ransac=100.0)
+    strQueryName = os.path.splitext(os.path.basename(args.query))[0]
+    oKptMatcher.Save("./result/MatchedResult_" + str(args.model) + str(strQueryName) + "_" + args.match)
 
 if __name__ == "__main__":
     strModel = args.model

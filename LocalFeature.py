@@ -58,11 +58,14 @@ class CKeypointHandler():
         self.__oImgMatch = None
         self.__matchesMask = None
 
-    def Matching(self, matching, ransac=-1):
+    def Matching(self, matching, model, ransac=-1):
         oMatcher = None
         if(matching == "bruteforce"):
-            oMatcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
-        
+            if(model == "orb"):
+                oMatcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+            else:
+                oMatcher = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+
         if(oMatcher == None):
             log.DebugPrint().error("Check matcher")
             return -1
@@ -95,7 +98,8 @@ class CKeypointHandler():
         elif(self.__mode == "query"):
             oImgResult = cv2.drawKeypoints(np.squeeze(self.__oQuery['image'], axis=0),
                                           self.__oQuery['keypoint'],
-                                          None)
+                                          None,
+                                          color=(0, 255, 0, 0))
         if(oImgResult is not None):
             cv2.imwrite(path, oImgResult)
             log.DebugPrint().info("Image Saved at " + str(path))
