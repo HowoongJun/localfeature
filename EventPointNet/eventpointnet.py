@@ -18,7 +18,10 @@ class CModel(CVisualLocalizationCore):
         self.__device = "cuda" if self.__gpuCheck else "cpu"
         self.__oQueryModel = nets.CEventPointNet().to(self.__device)
         if(argsmode == 'query' or argsmode == 'match'):
-            self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint.pth"))
+            if(self.__gpuCheck):
+                self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint.pth"))
+            else:
+                self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint.pth", map_location=torch.device("cpu")))
             self.__oSift = cv2.SIFT_create()
             DebugPrint().info("Load Model Completed!")
 
@@ -40,8 +43,8 @@ class CModel(CVisualLocalizationCore):
             kptDist = torch.nn.functional.pixel_shuffle(kptDist, 8)
             kptDist = kptDist.data.cpu().numpy()
             DebugPrint().info("Generate Local Feature, Threshold: " + str(self.__threshold))
-            kpt, desc = self.__GenerateLocalFeature(kptDist, self.__threshold)
-            return kpt, desc
+            kpt, desc, heatmap = self.__GenerateLocalFeature(kptDist, self.__threshold)
+            return kpt, desc, heatmap
 
     def Setting(self, eCommand:int, Value=None):
         SetCmd = eSettingCmd(eCommand)
@@ -75,4 +78,4 @@ class CModel(CVisualLocalizationCore):
 
         _, vDesc = self.__oSift.compute(self.__ImageOriginal, vKpt)
         
-        return vKpt, vDesc
+        return vKpt, vDesc, heatmap
