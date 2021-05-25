@@ -70,7 +70,7 @@ class CKeypointHandler():
             log.DebugPrint().error("Check matcher")
             return -1
         self.__vMatches = oMatcher.match(self.__oQuery['descriptor'], self.__oMatch['descriptor'])
-        
+        log.DebugPrint().info("Matching Number: " + str(len(self.__vMatches)))
         if(ransac is not -1):
             vKpSetQuery = np.float32([self.__oQuery['keypoint'][m.queryIdx].pt for m in self.__vMatches]).reshape(-1, 1, 2)
             vKpSetMatch = np.float32([self.__oMatch['keypoint'][m.trainIdx].pt for m in self.__vMatches]).reshape(-1, 1, 2)
@@ -103,3 +103,8 @@ class CKeypointHandler():
         if(oImgResult is not None):
             cv2.imwrite(path, oImgResult)
             log.DebugPrint().info("Image Saved at " + str(path))
+
+    # def SaveHeatmap(self, query_path, match_path = None):
+    #     cv2.imwrite(query_path, self.__oQuery['heatmap'])
+    #     if(match_path is not None):
+    #         cv2.imwrite(match_path, self.__oMatch['heatmap'])

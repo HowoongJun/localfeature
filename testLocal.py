@@ -69,6 +69,7 @@ def queryCheck(oModel):
         oQuery = dict(image=oImage, keypoint=vKpt, descriptor=vDesc)
         oKptHandler = CKeypointHandler(args.mode, oQuery)
         oKptHandler.Save("./result/KptResult_" + str(args.model) + "_" + str(os.path.basename(fileIdx)))
+        oKptHandler.SaveHeatmap("./result/HeatmapQuery_" + str(args.model) + "_" + str(os.path.basename(fileIdx)))
         oKptHandler.Reset()
         oModel.Reset()
     return True
@@ -104,6 +105,7 @@ def featureMatching(oModel):
     oKptMatcher.Matching("bruteforce", args.model, ransac=100.0)
     strQueryName = os.path.splitext(os.path.basename(args.query))[0]
     oKptMatcher.Save("./result/MatchedResult_" + str(args.model) + str(strQueryName) + "_" + args.match)
+    # oKptMatcher.SaveHeatmap("./result/HeatmapQuery_" + str(args.model) + "_" + str(args.query), "./result/HeatmapMatch_" + str(args.model) + "_" + str(args.match))
 
 if __name__ == "__main__":
     strModel = args.model
