@@ -43,8 +43,8 @@ class CModel(CVisualLocalizationCore):
             kptDist = torch.nn.functional.pixel_shuffle(kptDist, 8)
             kptDist = kptDist.data.cpu().numpy()
             DebugPrint().info("Generate Local Feature, Threshold: " + str(self.__threshold))
-            kpt, desc = self.__GenerateLocalFeature(kptDist, self.__threshold)
-            return kpt, desc
+            kpt, desc, heatmap = self.__GenerateLocalFeature(kptDist, self.__threshold)
+            return kpt, desc, heatmap
 
     def Setting(self, eCommand:int, Value=None):
         SetCmd = eSettingCmd(eCommand)
@@ -77,5 +77,5 @@ class CModel(CVisualLocalizationCore):
             vKpt.append(vKpt_tmp)
 
         _, vDesc = self.__oSift.compute(self.__ImageOriginal, vKpt)
-        
-        return vKpt, vDesc
+        oHeatmap = ((heatmap - np.min(heatmap)) * 255 / (np.max(heatmap) - np.min(heatmap))).astype(np.uint8)
+        return vKpt, vDesc, oHeatmap

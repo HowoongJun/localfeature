@@ -9,6 +9,7 @@ from glob import glob
 import torch, cv2
 import common.Log as log
 import numpy as np
+import time
 
 parser = argparse.ArgumentParser(description='Test Local Feature')
 parser.add_argument('--model', '--m', type=str, default='mymodule', dest='model',
@@ -65,11 +66,10 @@ def queryCheck(oModel):
         strImgPath = fileIdx
         oImage = imageRead(strImgPath)
         oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImage)
-        vKpt, vDesc = oModel.Read()
+        vKpt, vDesc, oHeatmap = oModel.Read()
         oQuery = dict(image=oImage, keypoint=vKpt, descriptor=vDesc)
         oKptHandler = CKeypointHandler(args.mode, oQuery)
         oKptHandler.Save("./result/KptResult_" + str(args.model) + "_" + str(os.path.basename(fileIdx)))
-        oKptHandler.SaveHeatmap("./result/HeatmapQuery_" + str(args.model) + "_" + str(os.path.basename(fileIdx)))
         oKptHandler.Reset()
         oModel.Reset()
     return True
@@ -91,21 +91,34 @@ def featureMatching(oModel):
         return False
     oImgQuery = imageRead(args.query)
     oImgMatch = imageRead(args.match)
-
+    
+    tmStartTime = time.time()
     oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImgQuery)
-    vKptQuery, vDescQuery = oModel.Read()
+    vKptQuery, vDescQuery, oHeatmapQuery = oModel.Read()
+    log.DebugPrint().info("Query Keypt Number: " + str(len(vKptQuery)))
     oQuery = dict(image=oImgQuery, keypoint=vKptQuery, descriptor=vDescQuery)
     oModel.Reset()
+    log.DebugPrint().info("Query Image keypoint generating time: " + str(time.time() - tmStartTime))
+    
+    tmStartTime = time.time()
     oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImgMatch)
-    vKptMatch, vDescMatch = oModel.Read()
+    vKptMatch, vDescMatch, oHeatmapMatch = oModel.Read()
+    log.DebugPrint().info("Match Keypt Number: " + str(len(vKptMatch)))
     oMatch = dict(image=oImgMatch, keypoint=vKptMatch, descriptor=vDescMatch)
     oModel.Reset()
+    log.DebugPrint().info("Match Image keypoint generating time: " + str(time.time() - tmStartTime))
 
+    tmStartTime = time.time()
     oKptMatcher = CKeypointHandler(args.mode, oQuery, oMatch)
-    oKptMatcher.Matching("bruteforce", args.model, ransac=100.0)
+    oKptMatcher.Matching("bruteforce", args.model, ransac=1000.0)
+    log.DebugPrint().info("Matching time: " + str(time.time() - tmStartTime))
+    
     strQueryName = os.path.splitext(os.path.basename(args.query))[0]
-    oKptMatcher.Save("./result/MatchedResult_" + str(args.model) + str(strQueryName) + "_" + args.match)
-    # oKptMatcher.SaveHeatmap("./result/HeatmapQuery_" + str(args.model) + "_" + str(args.query), "./result/HeatmapMatch_" + str(args.model) + "_" + str(args.match))
+    strMatchName = os.path.basename(args.match)
+    oKptMatcher.Save("./result/MatchedResult_" + str(args.model) + str(strQueryName) + "_" + str(strMatchName))
+    if(args.model == "eventpointnet"):
+        cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmapQuery)
+        cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.match)), oHeatmapMatch)
 
 if __name__ == "__main__":
     strModel = args.model
