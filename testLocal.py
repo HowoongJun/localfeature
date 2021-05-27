@@ -28,6 +28,8 @@ parser.add_argument('--thresh', '--t', type=int, default=3000, dest='threshold',
                     help='Threshold value for keypoint number')
 parser.add_argument('--db', '--d', type=str, dest='db', default=None,
                     help='DB path for training')
+parser.add_argument('--ransac', '--r', type=float, default=100.0, dest='ransac',
+                    help='RANSAC Threshold value')
 
 args = parser.parse_args()
 
@@ -110,7 +112,7 @@ def featureMatching(oModel):
 
     tmStartTime = time.time()
     oKptMatcher = CKeypointHandler(args.mode, oQuery, oMatch)
-    oKptMatcher.Matching("bruteforce", args.model, ransac=1000.0)
+    oKptMatcher.Matching("bruteforce", args.model, ransac=args.ransac)
     log.DebugPrint().info("Matching time: " + str(time.time() - tmStartTime))
     
     strQueryName = os.path.splitext(os.path.basename(args.query))[0]
