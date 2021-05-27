@@ -4,7 +4,6 @@ from glob import glob
 import os
 from skimage import io
 import numpy as np
-from skimage.transform import resize
 
 class CDataset(Dataset):
     def __init__(self, dataPath, transforms=None):        
@@ -32,7 +31,7 @@ class CDataset(Dataset):
         image = io.imread(self.__trainPath + str(npyData['image']))
         image = np.expand_dims(image, axis=0)
         
-        target = npyData['siftkptbinary']
+        target = npyData['tsimagenormalized']
         target = np.expand_dims(target, axis=0)
 
         result = {'image': image, 'target': target}
