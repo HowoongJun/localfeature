@@ -3,6 +3,7 @@ from torch.utils.data import Dataset, DataLoader
 from glob import glob
 import os
 from skimage import io
+from skimage import transform
 import numpy as np
 
 class CDataset(Dataset):
@@ -29,12 +30,18 @@ class CDataset(Dataset):
         npyData = np.load(self.__dataPath + self.__dataList[idx])
 
         image = io.imread(self.__trainPath + str(npyData['image']))
+        rotimage = transform.rotate(image, 90)
+        
         image = np.expand_dims(image, axis=0)
+        rotimage = np.expand_dims(rotimage, axis=0)
         
         target = npyData['tsimagenormalized']
-        target = np.expand_dims(target, axis=0)
+        rottarget = transform.rotate(target, 90)
 
-        result = {'image': image, 'target': target}
+        target = np.expand_dims(target, axis=0)
+        rottarget = np.expand_dims(rottarget, axis=0)
+        
+        result = {'image': image, 'target': target, 'rotimage': rotimage, 'rottarget': rottarget}
 
         if self.__transforms:
             result = self.__transforms(result)
