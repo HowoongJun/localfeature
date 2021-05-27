@@ -5,6 +5,7 @@ import os
 from skimage import io
 from skimage import transform
 import numpy as np
+import random
 
 class CDataset(Dataset):
     def __init__(self, dataPath, transforms=None):        
@@ -29,14 +30,15 @@ class CDataset(Dataset):
             idx = len(self.__dataList) - 1
         npyData = np.load(self.__dataPath + self.__dataList[idx])
 
+        rotDeg = random.randrange(-90, 90)
         image = io.imread(self.__trainPath + str(npyData['image']))
-        rotimage = transform.rotate(image, 90)
+        rotimage = transform.rotate(image, rotDeg)
         
         image = np.expand_dims(image, axis=0)
         rotimage = np.expand_dims(rotimage, axis=0)
         
         target = npyData['tsimagenormalized']
-        rottarget = transform.rotate(target, 90)
+        rottarget = transform.rotate(target, rotDeg)
 
         target = np.expand_dims(target, axis=0)
         rottarget = np.expand_dims(rottarget, axis=0)
