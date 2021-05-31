@@ -35,6 +35,7 @@ args = parser.parse_args()
 
 def imageRead(strImgPath):
     oImage = io.imread(strImgPath)
+    # oImage = resize(oImage, (1920, 1080))
     if(oImage is None):
         return False
     if(len(oImage.shape) < 3):
@@ -74,6 +75,8 @@ def queryCheck(oModel):
         oKptHandler.Save("./result/KptResult_" + str(args.model) + "_" + str(os.path.basename(fileIdx)))
         oKptHandler.Reset()
         oModel.Reset()
+        if(args.model == "eventpointnet" or args.model == "superpoint"):
+            cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmap)
     return True
 
 def checkGPU():
@@ -109,7 +112,7 @@ def featureMatching(oModel):
     oMatch = dict(image=oImgMatch, keypoint=vKptMatch, descriptor=vDescMatch)
     oModel.Reset()
     log.DebugPrint().info("Match Image keypoint generating time: " + str(time.time() - tmStartTime))
-
+    
     tmStartTime = time.time()
     oKptMatcher = CKeypointHandler(args.mode, oQuery, oMatch)
     oKptMatcher.Matching("bruteforce", args.model, ransac=args.ransac)
@@ -118,7 +121,7 @@ def featureMatching(oModel):
     strQueryName = os.path.splitext(os.path.basename(args.query))[0]
     strMatchName = os.path.basename(args.match)
     oKptMatcher.Save("./result/MatchedResult_" + str(args.model) + str(strQueryName) + "_" + str(strMatchName))
-    if(args.model == "eventpointnet"):
+    if(args.model == "eventpointnet" or args.model == "superpoint"):
         cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmapQuery)
         cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.match)), oHeatmapMatch)
 

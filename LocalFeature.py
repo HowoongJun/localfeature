@@ -12,9 +12,7 @@ class CVisualLocLocal(CVisualLocalizationCore):
         else:
             self.__gpuCheck = False
 
-        if model == "mymodule":
-            self.__module = imp.load_source(model, "./lcore/mymodule.py")
-        elif model == "superpoint":
+        if model == "superpoint":
             log.DebugPrint().info("Model: SuperPoint")
             self.__module = imp.load_source(model, "./localfeature_ref/superpoint/superpoint.py")
         elif model == "eventpointnet":
@@ -69,6 +67,7 @@ class CKeypointHandler():
         if(oMatcher == None):
             log.DebugPrint().error("Check matcher")
             return -1
+        
         self.__vMatches = oMatcher.match(self.__oQuery['descriptor'], self.__oMatch['descriptor'])
         log.DebugPrint().info("Matching Number: " + str(len(self.__vMatches)))
         if(ransac is not -1):
