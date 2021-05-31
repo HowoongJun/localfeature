@@ -70,6 +70,14 @@ class CModel(CVisualLocalizationCore):
         xs, ys = np.where(heatmap >= heatmap_aligned[threshold])
         vKpt = []
         vDesc = []
+        H, W = heatmap.shape
+        pts = np.zeros((3, len(xs)))
+        pts[0, :] = ys
+        pts[1, :] = xs
+        pts[2, :] = heatmap[xs, ys]
+        pts, _ = self.__Nms_fast(pts, H, W, 4)
+        ys = pts[0, :]
+        xs = pts[1, :]
         if(len(self.__ImageOriginal.shape) >= 3):
                 self.__ImageOriginal = np.squeeze(self.__ImageOriginal, axis=0)
         for kptNo in range(len(xs)):
@@ -79,3 +87,43 @@ class CModel(CVisualLocalizationCore):
         _, vDesc = self.__oSift.compute(self.__ImageOriginal, vKpt)
         oHeatmap = ((heatmap - np.min(heatmap)) * 255 / (np.max(heatmap) - np.min(heatmap))).astype(np.uint8)
         return vKpt, vDesc, oHeatmap
+
+    def __Nms_fast(self, in_corners, H, W, dist_thresh):
+        grid = np.zeros((H, W)).astype(int) 
+        inds = np.zeros((H, W)).astype(int) 
+        
+        inds1 = np.argsort(-in_corners[2,:])
+        corners = in_corners[:,inds1]
+        rcorners = corners[:2,:].round().astype(int) 
+        
+        if rcorners.shape[1] == 0:
+            return np.zeros((3,0)).astype(int), np.zeros(0).astype(int)
+        if rcorners.shape[1] == 1:
+            out = np.vstack((rcorners, in_corners[2])).reshape(3,1)
+            return out, np.zeros((1)).astype(int)
+        
+        for i, rc in enumerate(rcorners.T):
+            grid[rcorners[1,i], rcorners[0,i]] = 1
+            inds[rcorners[1,i], rcorners[0,i]] = i
+        
+        pad = dist_thresh
+        grid = np.pad(grid, ((pad,pad), (pad,pad)), mode='constant')
+        
+        count = 0
+        for i, rc in enumerate(rcorners.T):
+        
+            pt = (rc[0]+pad, rc[1]+pad)
+            if grid[pt[1], pt[0]] == 1:
+                grid[pt[1]-pad:pt[1]+pad+1, pt[0]-pad:pt[0]+pad+1] = 0
+                grid[pt[1], pt[0]] = -1
+                count += 1
+        
+        keepy, keepx = np.where(grid==-1)
+        keepy, keepx = keepy - pad, keepx - pad
+        inds_keep = inds[keepy, keepx]
+        out = corners[:, inds_keep]
+        values = out[-1, :]
+        inds2 = np.argsort(-values)
+        out = out[:, inds2]
+        out_inds = inds1[inds_keep[inds2]]
+        return out, out_inds
