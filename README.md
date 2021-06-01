@@ -30,6 +30,8 @@ python run.py --mode <MODE> --model <MODEL>
 ```
 pytorch 1.7.1
 opencv 4.5.1
+scikit-image 0.17.2
+numpy 1.19.5
 ```
 
 ## Training
