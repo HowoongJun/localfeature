@@ -24,6 +24,14 @@ Argument mode and model are mandatory for the execution.
 python run.py --mode <MODE> --model <MODEL> 
 ```
 
+
+## Implementation
+
+```
+pytorch 1.7.1
+opencv 4.5.1
+```
+
 ## Training
 
 Pre-trained model for the method is provided here (`EventPointNet/checkpoints/checkpoint.pth`)
