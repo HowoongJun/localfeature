@@ -25,14 +25,18 @@ python run.py --mode <MODE> --model <MODEL>
 ```
 
 
-## Implementation
+## Dependencies
 
 ```
+python 3.8.5
 pytorch 1.7.1
-opencv 4.5.1
-scikit-image 0.17.2
-numpy 1.19.5
+opencv 4.5.2
+scikit-image 0.18.1
+numpy 1.19.2
 ```
+
+Aside from above dependencies, docker container for this repository is provided [here](https://hub.docker.com/r/howoongjun/eventpointnet)
+
 
 ## Training
 
