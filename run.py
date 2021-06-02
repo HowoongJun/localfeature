@@ -12,30 +12,33 @@ import numpy as np
 import time
 
 parser = argparse.ArgumentParser(description='Test Local Feature')
-parser.add_argument('--model', '--m', type=str, default='mymodule', dest='model',
+parser.add_argument('--model', '-m', type=str, default='mymodule', dest='model',
                     help='Model select: mymodule, superpoint, eventpointnet, sift, orb')
-parser.add_argument('--resize', '--z', default='[1280,720]', dest='resize',
-                    help='Resize image [width,height] (default = [1280,720]')
-parser.add_argument('--channel', '--c', type=int, default=3, dest='channel',
+parser.add_argument('--width', '-W', type=int, default=None, dest='width',
+                    help='Width for resize image')
+parser.add_argument('--height', '-H', type=int, default=None, dest='height',
+                    help='Height for resize image')
+parser.add_argument('--channel', '-c', type=int, default=3, dest='channel',
                     help='Image channel (default = 3)')
-parser.add_argument('--mode', '--o', type=str, dest='mode',
+parser.add_argument('--mode', '-o', type=str, dest='mode',
                     help='Mode select: makedb, query, match, train')
-parser.add_argument('--query', '--q', type=str, dest='query',
+parser.add_argument('--query', '-q', type=str, dest='query',
                     help='Image query file path')
-parser.add_argument('--match', '--a', type=str, dest='match',
+parser.add_argument('--match', '-a', type=str, dest='match',
                     help='Image match file path')
-parser.add_argument('--thresh', '--t', type=int, default=3000, dest='threshold',
+parser.add_argument('--thresh', '-t', type=int, default=3000, dest='threshold',
                     help='Threshold value for keypoint number')
-parser.add_argument('--db', '--d', type=str, dest='db', default=None,
+parser.add_argument('--db', '-d', type=str, dest='db', default=None,
                     help='DB path for training')
-parser.add_argument('--ransac', '--r', type=float, default=100.0, dest='ransac',
+parser.add_argument('--ransac', '-r', type=float, default=100.0, dest='ransac',
                     help='RANSAC Threshold value')
 
 args = parser.parse_args()
 
 def imageRead(strImgPath):
     oImage = io.imread(strImgPath)
-    # oImage = resize(oImage, (1920, 1080))
+    if(args.width is not None or args.height is not None):
+        oImage = resize(oImage, (args.height, args.width))
     if(oImage is None):
         return False
     if(len(oImage.shape) < 3):
@@ -100,6 +103,7 @@ def featureMatching(oModel):
     tmStartTime = time.time()
     oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImgQuery)
     vKptQuery, vDescQuery, oHeatmapQuery = oModel.Read()
+
     log.DebugPrint().info("Query Keypt Number: " + str(len(vKptQuery)))
     oQuery = dict(image=oImgQuery, keypoint=vKptQuery, descriptor=vDescQuery)
     oModel.Reset()
@@ -122,8 +126,10 @@ def featureMatching(oModel):
     strMatchName = os.path.basename(args.match)
     oKptMatcher.Save("./result/MatchedResult_" + str(args.model) + str(strQueryName) + "_" + str(strMatchName))
     if(args.model == "eventpointnet" or args.model == "superpoint"):
-        cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmapQuery)
-        cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.match)), oHeatmapMatch)
+        if(oHeatmapQuery is not None):
+            cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmapQuery)
+        if(oHeatmapMatch is not None):
+            cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.match)), oHeatmapMatch)
 
 if __name__ == "__main__":
     strModel = args.model
