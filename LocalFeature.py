@@ -70,8 +70,8 @@ class CKeypointHandler():
         
         self.__vMatches = oMatcher.match(self.__oQuery['descriptor'], self.__oMatch['descriptor'])
         log.DebugPrint().info("Matching Number: " + str(len(self.__vMatches)))
-        
-        if(ransac is not -1.0):
+        self.__matchesMask = None        
+        if(ransac != -1.0 and len(self.__vMatches) >= 4):
             vKpSetQuery = np.float32([self.__oQuery['keypoint'][m.queryIdx].pt for m in self.__vMatches]).reshape(-1, 1, 2)
             vKpSetMatch = np.float32([self.__oMatch['keypoint'][m.trainIdx].pt for m in self.__vMatches]).reshape(-1, 1, 2)
             _, self.__matchesMask = cv2.findHomography(vKpSetQuery, vKpSetMatch, cv2.RANSAC, ransac)
@@ -85,6 +85,9 @@ class CKeypointHandler():
     def Save(self, path):
         oImgResult = None
         if(self.__mode == "match"):
+            if(len(self.__vMatches) == 0):
+                log.DebugPrint().info("No matching points")
+                return False
             oImgResult = cv2.drawMatches(np.squeeze(self.__oQuery['image'], axis=0), 
                                         self.__oQuery['keypoint'], 
                                         np.squeeze(self.__oMatch['image'], axis=0), 
@@ -93,9 +96,12 @@ class CKeypointHandler():
                                         None, 
                                         matchColor=(0, 255, 0, 0),
                                         singlePointColor=(0, 0, 255, 0),
-                                        matchesMask = self.__matchesMask, 
+                                        matchesMask = self.__matchesMask,
                                         flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT)
         elif(self.__mode == "query"):
+            if(len(self.__oQuery['keypoint']) == 0):
+                log.DebugPrint().info("No matching points")
+                return False
             oImgResult = cv2.drawKeypoints(np.squeeze(self.__oQuery['image'], axis=0),
                                           self.__oQuery['keypoint'],
                                           None,
