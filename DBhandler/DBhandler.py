@@ -7,6 +7,8 @@ class CDbHandler():
         DebugPrint().info(db + " dataset loaded!")
         if(db == "MVSEC"):
             self.__db = imp.load_source(db, "./DBhandler/MVSEC.py")
+        elif(db == "paris"):
+            self.__db = imp.load_source(db, "./DBhandler/Paris.py")
 
     def Open(self, dbPath):
         if(not os.path.exists(dbPath)):

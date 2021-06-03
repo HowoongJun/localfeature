@@ -32,17 +32,19 @@ class CModel(CVisualLocalizationCore):
         oTrain = train.CTrain()
         oTrain.Open(db=db, dbPath=dbPath)
         oTrain.Setting()
-        oTrain.run()
+        oTrain.train_keypt()
 
     def Read(self):
         with torch.no_grad():
             self.__oQueryModel.eval()
             kptDist, _ = self.__oQueryModel.forward(self.__Image)
-            kptDist = self.softmax(kptDist)
-            kptDist = kptDist[:,:-1,:]
-            kptDist = torch.nn.functional.pixel_shuffle(kptDist, 8)
+            # kptDist = self.softmax(kptDist)
             kptDist = kptDist.data.cpu().numpy()
-            DebugPrint().info("Generate Local Feature, Threshold: " + str(self.__threshold))
+            kptDist = np.exp(kptDist)
+            kptDist = kptDist / (np.sum(kptDist[0], axis=0)+.00001)
+            kptDist = kptDist[:,:-1,:]
+            kptDist = torch.nn.functional.pixel_shuffle(torch.from_numpy(kptDist).to(self.__device), 8)
+            kptDist = kptDist.data.cpu().numpy()
             kpt, desc, heatmap = self.__GenerateLocalFeature(kptDist, self.__threshold)
             return kpt, desc, heatmap
 
@@ -67,7 +69,7 @@ class CModel(CVisualLocalizationCore):
         heatmap = np.squeeze(heatmap, axis=0)
         heatmap_aligned = heatmap.reshape(-1)
         heatmap_aligned = np.sort(heatmap_aligned)[::-1]
-        xs, ys = np.where(heatmap >= heatmap_aligned[threshold])
+        xs, ys = np.where(heatmap >= 0.0154)#heatmap_aligned[threshold])
         vKpt = []
         vDesc = []
         H, W = heatmap.shape
@@ -79,7 +81,7 @@ class CModel(CVisualLocalizationCore):
         ys = pts[0, :]
         xs = pts[1, :]
         if(len(self.__ImageOriginal.shape) >= 3):
-                self.__ImageOriginal = np.squeeze(self.__ImageOriginal, axis=0)
+            self.__ImageOriginal = np.squeeze(self.__ImageOriginal, axis=0)
         for kptNo in range(len(xs)):
             vKpt_tmp = cv2.KeyPoint(int(ys[kptNo]), int(xs[kptNo]), 5.0)
             vKpt.append(vKpt_tmp)
