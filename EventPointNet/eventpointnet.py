@@ -16,36 +16,43 @@ class CModel(CVisualLocalizationCore):
     def Open(self, bGPUFlag, argsmode):
         self.__gpuCheck = bGPUFlag
         self.__device = "cuda" if self.__gpuCheck else "cpu"
-        self.__oQueryModel = nets.CEventPointNet().to(self.__device)
+        self.__oDescModel = nets.CDescriptorNet().to(self.__device)
         if(argsmode == 'query' or argsmode == 'match'):
+            self.__oQueryModel = nets.CDetectorNet().to(self.__device)
             if(self.__gpuCheck):
-                self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint.pth"))
+                self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint_detector.pth"))
+                self.__oDescModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint_descriptor.pth"))
             else:
-                self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint.pth", map_location=torch.device("cpu")))
+                self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint_detector.pth", map_location=torch.device("cpu")))
+                self.__oDescModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint_descriptor.pth", map_location=torch.device("cpu")))
+
             self.__oSift = cv2.SIFT_create()
             DebugPrint().info("Load Model Completed!")
 
     def Close(self):
         print("CEventPointNet Close!")
 
-    def Write(self, db, dbPath):
+    def Write(self, db, dbPath, train_mode):
         oTrain = train.CTrain()
         oTrain.Open(db=db, dbPath=dbPath)
-        oTrain.Setting()
-        oTrain.train_keypt()
-
+        if(oTrain.Setting(train_mode)):
+            oTrain.train(train_mode)
+        
     def Read(self):
         with torch.no_grad():
             self.__oQueryModel.eval()
+            self.__oDescModel.eval()
             kptDist, _ = self.__oQueryModel.forward(self.__Image)
+            descDist = self.__oDescModel.forward(self.__Image)
             # kptDist = self.softmax(kptDist)
             kptDist = kptDist.data.cpu().numpy()
+            descDist = descDist.data.cpu().numpy()
             kptDist = np.exp(kptDist)
             kptDist = kptDist / (np.sum(kptDist[0], axis=0)+.00001)
             kptDist = kptDist[:,:-1,:]
             kptDist = torch.nn.functional.pixel_shuffle(torch.from_numpy(kptDist).to(self.__device), 8)
             kptDist = kptDist.data.cpu().numpy()
-            kpt, desc, heatmap = self.__GenerateLocalFeature(kptDist, self.__threshold)
+            kpt, desc, heatmap = self.__GenerateLocalFeature(kptDist, descDist)
             return kpt, desc, heatmap
 
     def Setting(self, eCommand:int, Value=None):
@@ -64,7 +71,8 @@ class CModel(CVisualLocalizationCore):
         self.__Image = None
         self.__channel = None
 
-    def __GenerateLocalFeature(self, keypoint_distribution, threshold):
+
+    def __GenerateLocalFeature(self, keypoint_distribution, descriptor_distribution):
         heatmap = np.squeeze(keypoint_distribution, axis=0)
         heatmap = np.squeeze(heatmap, axis=0)
         heatmap_aligned = heatmap.reshape(-1)
@@ -82,11 +90,23 @@ class CModel(CVisualLocalizationCore):
         xs = pts[1, :]
         if(len(self.__ImageOriginal.shape) >= 3):
             self.__ImageOriginal = np.squeeze(self.__ImageOriginal, axis=0)
+        
+        vKeyptLoc = pts[:2, :]
+        vKeyptLoc = np.transpose(vKeyptLoc)
+        vKeyptLoc = np.expand_dims(np.expand_dims(vKeyptLoc, axis=0), axis=0)
+        tKeyptLoc = torch.from_numpy(vKeyptLoc.copy()).cuda().float()
+
+        desc = np.squeeze(descriptor_distribution, axis=0)
+        # print(desc.shape)
         for kptNo in range(len(xs)):
             vKpt_tmp = cv2.KeyPoint(int(ys[kptNo]), int(xs[kptNo]), 5.0)
             vKpt.append(vKpt_tmp)
-
+            # vDesc.append(desc[:][int(ys[kptNo]/8)][int(xs[kptNo]/8)])
+            # print(ys[kptNo], xs[kptNo])
+            # print(desc[:,int(xs[kptNo]),int(ys[kptNo])].shape)
+            vDesc.append(desc[:, int(xs[kptNo]), int(ys[kptNo])])
         _, vDesc = self.__oSift.compute(self.__ImageOriginal, vKpt)
+        # vDesc = np.array(vDesc)
         oHeatmap = ((heatmap - np.min(heatmap)) * 255 / (np.max(heatmap) - np.min(heatmap))).astype(np.uint8)
         return vKpt, vDesc, oHeatmap
 

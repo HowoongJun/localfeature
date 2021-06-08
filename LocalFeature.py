@@ -38,8 +38,8 @@ class CVisualLocLocal(CVisualLocalizationCore):
     def Read(self):
         return self.__model.Read()
 
-    def Write(self, db, dbPath):
-        self.__model.Write(db, dbPath)
+    def Write(self, db, dbPath, train_mode="train_keypt"):
+        self.__model.Write(db, dbPath, train_mode)
 
     def Setting(self, eCommand:int, Value=None):
         self.__model.Setting(eCommand, Value)
@@ -69,12 +69,12 @@ class CKeypointHandler():
             return -1
         
         self.__vMatches = oMatcher.match(self.__oQuery['descriptor'], self.__oMatch['descriptor'])
-        log.DebugPrint().info("Matching Number: " + str(len(self.__vMatches)))
         self.__matchesMask = None        
         if(ransac != -1.0 and len(self.__vMatches) >= 4):
             vKpSetQuery = np.float32([self.__oQuery['keypoint'][m.queryIdx].pt for m in self.__vMatches]).reshape(-1, 1, 2)
             vKpSetMatch = np.float32([self.__oMatch['keypoint'][m.trainIdx].pt for m in self.__vMatches]).reshape(-1, 1, 2)
             _, self.__matchesMask = cv2.findHomography(vKpSetQuery, vKpSetMatch, cv2.RANSAC, ransac)
+            log.DebugPrint().info("Matching Number (RANSAC): " + str(np.sum(self.__matchesMask)))
 
     def Reset(self):
         self.__vMatches = None
