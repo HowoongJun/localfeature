@@ -77,7 +77,7 @@ class CModel(CVisualLocalizationCore):
         heatmap = np.squeeze(heatmap, axis=0)
         heatmap_aligned = heatmap.reshape(-1)
         heatmap_aligned = np.sort(heatmap_aligned)[::-1]
-        xs, ys = np.where(heatmap >= 0.0154)#heatmap_aligned[threshold])
+        xs, ys = np.where(heatmap >= 0.01539)#heatmap_aligned[threshold])
         vKpt = []
         vDesc = []
         H, W = heatmap.shape
@@ -97,13 +97,9 @@ class CModel(CVisualLocalizationCore):
         tKeyptLoc = torch.from_numpy(vKeyptLoc.copy()).cuda().float()
 
         desc = np.squeeze(descriptor_distribution, axis=0)
-        # print(desc.shape)
         for kptNo in range(len(xs)):
             vKpt_tmp = cv2.KeyPoint(int(ys[kptNo]), int(xs[kptNo]), 5.0)
             vKpt.append(vKpt_tmp)
-            # vDesc.append(desc[:][int(ys[kptNo]/8)][int(xs[kptNo]/8)])
-            # print(ys[kptNo], xs[kptNo])
-            # print(desc[:,int(xs[kptNo]),int(ys[kptNo])].shape)
             vDesc.append(desc[:, int(xs[kptNo]), int(ys[kptNo])])
         _, vDesc = self.__oSift.compute(self.__ImageOriginal, vKpt)
         # vDesc = np.array(vDesc)
