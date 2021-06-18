@@ -27,8 +27,13 @@ class CDataset(Dataset):
         image = (resize(image, (480,640)) * 255).astype(np.uint8)
         image = np.expand_dims(image, axis=0)
         
-        target = (((image / 255.0) ** (1.0 / 0.3)) * 255).astype(np.uint8)
-        result = {'image': image, 'target': target}
+        target_05 = (((image / 255.0) ** (1.0 / 0.5)) * 255).astype(np.uint8)
+        target_04 = (((image / 255.0) ** (1.0 / 0.4)) * 255).astype(np.uint8)
+        target_03 = (((image / 255.0) ** (1.0 / 0.3)) * 255).astype(np.uint8)
+        target_02 = (((image / 255.0) ** (1.0 / 0.2)) * 255).astype(np.uint8)
+
+
+        result = {'target': image, 'image0.5': target_05, 'image0.4': target_04, 'image0.3': target_03, 'image0.2': target_02}
 
         if self.__transforms:
             result = self.__transforms(result)
