@@ -47,7 +47,8 @@ class CDetectorNet(torch.nn.Module):
 class CDescriptorNet(torch.nn.Module):
     def __init__(self):
         super(CDescriptorNet, self).__init__()
-        self.relu = torch.nn.ReLU(inplace=True)
+        # self.relu = torch.nn.ReLU(inplace=True)
+        self.relu = torch.nn.LeakyReLU(0.1)
                 
         self.conv1_1 = torch.nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
         self.conv1_2 = torch.nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1)
@@ -68,7 +69,8 @@ class CDescriptorNet(torch.nn.Module):
         x = self.relu(self.conv3_2(x))
         
         desc = self.relu(self.conv4_1(x))
+
         descNorm = torch.norm(desc, p=2, dim=1)
         desc = desc.div(torch.unsqueeze(descNorm, 1))
-
+        
         return desc
