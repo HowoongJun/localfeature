@@ -24,6 +24,9 @@ class CVisualLocLocal(CVisualLocalizationCore):
         elif model == "sift":
             log.DebugPrint().info("Model: SIFT")
             self.__module = imp.load_source(model, "./localfeature_ref/sift/sift.py")
+        elif model == "r2d2":
+            log.DebugPrint().info("Model: R2D2")
+            self.__module = imp.load_source(model, "./localfeature_ref/r2d2/r2d2.py")
 
     def __del__(self):
         self.Close()
@@ -102,6 +105,7 @@ class CKeypointHandler():
             if(len(self.__oQuery['keypoint']) == 0):
                 log.DebugPrint().info("No matching points")
                 return False
+
             oImgResult = cv2.drawKeypoints(np.squeeze(self.__oQuery['image'], axis=0),
                                           self.__oQuery['keypoint'],
                                           None,

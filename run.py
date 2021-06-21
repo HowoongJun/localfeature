@@ -13,7 +13,7 @@ import time
 
 parser = argparse.ArgumentParser(description='Test Local Feature')
 parser.add_argument('--model', '-m', type=str, default='mymodule', dest='model',
-                    help='Model select: mymodule, superpoint, eventpointnet, sift, orb')
+                    help='Model select: mymodule, superpoint, eventpointnet, sift, orb, r2d2')
 parser.add_argument('--width', '-W', type=int, default=None, dest='width',
                     help='Width for resize image')
 parser.add_argument('--height', '-H', type=int, default=None, dest='height',
@@ -41,11 +41,13 @@ def imageRead(strImgPath):
         oImage = resize(oImage, (args.height, args.width))
     if(oImage is None):
         return False
-    if(len(oImage.shape) < 3):
-        oImage = np.expand_dims(np.asarray(oImage), axis=0)
-    elif(len(oImage.shape) == 3):
-        oImage = (color.rgb2gray(oImage) * 255).astype(np.uint8)
-        oImage = np.expand_dims(np.asarray(oImage), axis=0)
+    if(args.model != "r2d2"):
+        if(len(oImage.shape) < 3):
+            oImage = np.expand_dims(np.asarray(oImage), axis=0)
+        elif(len(oImage.shape) == 3):
+            oImage = (color.rgb2gray(oImage) * 255).astype(np.uint8)
+            oImage = np.expand_dims(np.asarray(oImage), axis=0)
+
     return oImage
 
 def readFolder(strImgFolder):
@@ -73,6 +75,10 @@ def queryCheck(oModel):
         oImage = imageRead(strImgPath)
         oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImage)
         vKpt, vDesc, oHeatmap = oModel.Read()
+        if(args.model == "r2d2"):
+            oImage = (color.rgb2gray(oImage) * 255).astype(np.uint8)
+            oImage = np.expand_dims(np.asarray(oImage), axis=0)
+        
         oQuery = dict(image=oImage, keypoint=vKpt, descriptor=vDesc)
         oKptHandler = CKeypointHandler(args.mode, oQuery)
         oKptHandler.Save("./result/KptResult_" + str(args.model) + "_" + str(os.path.basename(fileIdx)))
