@@ -42,9 +42,9 @@ class CModel(CVisualLocalizationCore):
         with torch.no_grad():
             self.__oQueryModel.eval()
             self.__oDescModel.eval()
-            kptDist, _ = self.__oQueryModel.forward(self.__Image)
+            kptDist = self.__oQueryModel.forward(self.__Image)
             descDist = self.__oDescModel.forward(self.__Image)
-            # kptDist = self.softmax(kptDist)
+            kptDist = self.softmax(kptDist)
             kptDist = kptDist.data.cpu().numpy()
             descDist = descDist.data.cpu().numpy()
             kptDist = np.exp(kptDist)
@@ -52,13 +52,14 @@ class CModel(CVisualLocalizationCore):
             kptDist = kptDist[:,:-1,:]
             kptDist = torch.nn.functional.pixel_shuffle(torch.from_numpy(kptDist).to(self.__device), 8)
             kptDist = kptDist.data.cpu().numpy()
+
             kpt, desc, heatmap = self.__GenerateLocalFeature(kptDist, descDist)
             return kpt, desc, heatmap
 
     def Setting(self, eCommand:int, Value=None):
         SetCmd = eSettingCmd(eCommand)
 
-        if(SetCmd == eSettingCmd.eSettingCmd_IMAGE_DATA):
+        if(SetCmd == eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY):
             self.__ImageOriginal = np.asarray(Value)
             self.__Image = np.expand_dims(np.asarray(Value), axis=1)
             self.__Image = torch.from_numpy(self.__Image).to(self.__device, dtype=torch.float)
@@ -77,7 +78,7 @@ class CModel(CVisualLocalizationCore):
         heatmap = np.squeeze(heatmap, axis=0)
         heatmap_aligned = heatmap.reshape(-1)
         heatmap_aligned = np.sort(heatmap_aligned)[::-1]
-        xs, ys = np.where(heatmap >= 0.01539)#heatmap_aligned[threshold])
+        xs, ys = np.where(heatmap >= 0.0156)#heatmap_aligned[threshold])
         vKpt = []
         vDesc = []
         H, W = heatmap.shape
@@ -100,9 +101,9 @@ class CModel(CVisualLocalizationCore):
         for kptNo in range(len(xs)):
             vKpt_tmp = cv2.KeyPoint(int(ys[kptNo]), int(xs[kptNo]), 5.0)
             vKpt.append(vKpt_tmp)
-            vDesc.append(desc[:, int(xs[kptNo]), int(ys[kptNo])])
+            # vDesc.append(desc[:, int(xs[kptNo]), int(ys[kptNo])])
         _, vDesc = self.__oSift.compute(self.__ImageOriginal, vKpt)
-        # vDesc = np.array(vDesc)
+        vDesc = np.array(vDesc)
         oHeatmap = ((heatmap - np.min(heatmap)) * 255 / (np.max(heatmap) - np.min(heatmap))).astype(np.uint8)
         return vKpt, vDesc, oHeatmap
 
