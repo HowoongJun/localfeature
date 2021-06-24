@@ -4,10 +4,11 @@ from enum import IntEnum
 
 class eSettingCmd(IntEnum):
     eSettingCmd_NONE = 1
-    eSettingCmd_IMAGE_DATA = 2
-    eSettingCmd_IMAGE_CHANNEL = 3
-    eSettingCmd_CONFIG = 4
-    eSettingCmd_THRESHOLD = 5
+    eSettingCmd_IMAGE_DATA_GRAY = 2
+    eSettingCmd_IMAGE_DATA = 3
+    eSettingCmd_IMAGE_CHANNEL = 4
+    eSettingCmd_CONFIG = 5
+    eSettingCmd_THRESHOLD = 6
     
 class CVisualLocalizationCore(metaclass=ABCMeta):
     @abstractmethod

@@ -10,6 +10,7 @@ import torch, cv2
 import common.Log as log
 import numpy as np
 import time
+from Evaluation import *
 
 parser = argparse.ArgumentParser(description='Test Local Feature')
 parser.add_argument('--model', '-m', type=str, default='mymodule', dest='model',
@@ -21,7 +22,7 @@ parser.add_argument('--height', '-H', type=int, default=None, dest='height',
 parser.add_argument('--channel', '-c', type=int, default=3, dest='channel',
                     help='Image channel (default = 3)')
 parser.add_argument('--mode', '-o', type=str, dest='mode',
-                    help='Mode select: makedb, query, match, train_desc, train_keypt')
+                    help='Mode select: makedb, query, match, train_desc, train_keypt, reinforce_desc')
 parser.add_argument('--query', '-q', type=str, dest='query',
                     help='Image query file path')
 parser.add_argument('--match', '-a', type=str, dest='match',
@@ -34,21 +35,6 @@ parser.add_argument('--ransac', '-r', type=float, default=100.0, dest='ransac',
                     help='RANSAC Threshold value')
 
 args = parser.parse_args()
-
-def imageRead(strImgPath):
-    oImage = io.imread(strImgPath)
-    if(args.width is not None or args.height is not None):
-        oImage = resize(oImage, (args.height, args.width))
-    if(oImage is None):
-        return False
-    if(args.model != "r2d2"):
-        if(len(oImage.shape) < 3):
-            oImage = np.expand_dims(np.asarray(oImage), axis=0)
-        elif(len(oImage.shape) == 3):
-            oImage = (color.rgb2gray(oImage) * 255).astype(np.uint8)
-            oImage = np.expand_dims(np.asarray(oImage), axis=0)
-
-    return oImage
 
 def readFolder(strImgFolder):
     if(not os.path.isdir(strImgFolder)):
@@ -70,20 +56,10 @@ def queryCheck(oModel):
         strFileList = [args.query]
     if(strFileList is False):
         return False
+    oEvaluation = CEvaluateLocalFeature(oModel, args.model)
     for fileIdx in strFileList:
-        strImgPath = fileIdx
-        oImage = imageRead(strImgPath)
-        oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImage)
-        vKpt, vDesc, oHeatmap = oModel.Read()
-        if(args.model == "r2d2"):
-            oImage = (color.rgb2gray(oImage) * 255).astype(np.uint8)
-            oImage = np.expand_dims(np.asarray(oImage), axis=0)
+        vKpt, vDesc, oHeatmap = oEvaluation.Query(fileIdx, args.width, args.height)
         
-        oQuery = dict(image=oImage, keypoint=vKpt, descriptor=vDesc)
-        oKptHandler = CKeypointHandler(args.mode, oQuery)
-        oKptHandler.Save("./result/KptResult_" + str(args.model) + "_" + str(os.path.basename(fileIdx)))
-        oKptHandler.Reset()
-        oModel.Reset()
         if(args.model == "eventpointnet" or args.model == "superpoint"):
             cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmap)
     return True
@@ -103,34 +79,10 @@ def featureMatching(oModel):
     if(os.path.isdir(args.query) or os.path.isdir(args.match)):
         log.DebugPrint().error("Query/match should be file, not folder")
         return False
-    oImgQuery = imageRead(args.query)
-    oImgMatch = imageRead(args.match)
-    
-    tmStartTime = time.time()
-    oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImgQuery)
-    vKptQuery, vDescQuery, oHeatmapQuery = oModel.Read()
 
-    log.DebugPrint().info("Query Keypt Number: " + str(len(vKptQuery)))
-    oQuery = dict(image=oImgQuery, keypoint=vKptQuery, descriptor=vDescQuery)
-    oModel.Reset()
-    log.DebugPrint().info("Query Image keypoint generating time: " + str(time.time() - tmStartTime))
+    oEvaluation = CEvaluateLocalFeature(oModel, args.model)
+    oHeatmapQuery, oHeatmapMatch = oEvaluation.Match(args.query, args.match, width=args.width, height=args.height, ransac=args.ransac)
     
-    tmStartTime = time.time()
-    oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImgMatch)
-    vKptMatch, vDescMatch, oHeatmapMatch = oModel.Read()
-    log.DebugPrint().info("Match Keypt Number: " + str(len(vKptMatch)))
-    oMatch = dict(image=oImgMatch, keypoint=vKptMatch, descriptor=vDescMatch)
-    oModel.Reset()
-    log.DebugPrint().info("Match Image keypoint generating time: " + str(time.time() - tmStartTime))
-    
-    tmStartTime = time.time()
-    oKptMatcher = CKeypointHandler(args.mode, oQuery, oMatch)
-    oKptMatcher.Matching("bruteforce", args.model, ransac=args.ransac)
-    log.DebugPrint().info("Matching time: " + str(time.time() - tmStartTime))
-    
-    strQueryName = os.path.splitext(os.path.basename(args.query))[0]
-    strMatchName = os.path.basename(args.match)
-    oKptMatcher.Save("./result/MatchedResult_" + str(args.model) + str(strQueryName) + "_" + str(strMatchName))
     if(args.model == "eventpointnet" or args.model == "superpoint"):
         if(oHeatmapQuery is not None):
             cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmapQuery)
@@ -163,6 +115,12 @@ if __name__ == "__main__":
         log.DebugPrint().info("[Local] Train Descriptor Mode")
         if(args.db == None):
             log.DebugPrint().error("[Local] No DB Path for Training!")
+            sys.exit()
+        model.Write("paris", args.db, args.mode)
+    elif(args.mode == "reinforce_desc"):
+        log.DebugPrint().info("[Local] Reinforcing Descriptor Mode")
+        if(args.db == None):
+            log.DebugPrint().error("[Local] No DB Path for Reinforcing!")
             sys.exit()
         model.Write("paris", args.db, args.mode)
     else:
