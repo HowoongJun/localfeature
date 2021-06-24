@@ -1,4 +1,14 @@
-# Visual Localization core abstract class
+###
+#
+#       @Brief          hal.py
+#       @Details        Visual Localization core abstract class
+#       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
+#       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
+#       @Date           Mar. 03, 2021
+#       @Version        v0.7
+#
+###
+
 from abc import *
 from enum import IntEnum
 

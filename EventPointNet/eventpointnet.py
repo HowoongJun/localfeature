@@ -1,3 +1,15 @@
+###
+#
+#       @Brief          eventpointnet.py
+#       @Details        EventPointNet model main class
+#       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
+#       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
+#       @Date           Mar. 18, 2021
+#       @Version        v0.17
+#
+###
+
+
 from lcore.hal import *
 import EventPointNet.train as train
 import EventPointNet.nets as nets

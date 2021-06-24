@@ -1,3 +1,14 @@
+###
+#
+#       @Brief          train.py
+#       @Details        Training code for EventPointNet
+#       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
+#       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
+#       @Date           Mar. 18, 2021
+#       @Version        v0.12
+#
+###
+
 import EventPointNet.nets as nets
 import torch, os
 from torchvision import datasets, transforms

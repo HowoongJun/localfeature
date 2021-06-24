@@ -1,4 +1,14 @@
-# Testing code for local feature
+###
+#
+#       @Brief          run.py
+#       @Details        Testing code for local feature
+#       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
+#       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
+#       @Date           May. 31, 2021
+#       @Version        v0.7
+#
+###
+
 from LocalFeature import *
 from lcore.hal import eSettingCmd
 import sys, os

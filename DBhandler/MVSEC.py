@@ -1,3 +1,15 @@
+###
+#
+#       @Brief          MVSEC.py
+#       @Details        Multi Vehicle Stereo Event Camera dataset handler
+#       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
+#       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
+#       @Date           Mar. 26, 2021
+#       @Version        v0.12
+#
+###
+
+
 import torch
 from torch.utils.data import Dataset
 from glob import glob

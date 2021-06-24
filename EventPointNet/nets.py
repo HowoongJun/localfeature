@@ -1,3 +1,14 @@
+###
+#
+#       @Brief          nets.py
+#       @Details        EventPointNet network 
+#       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
+#       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
+#       @Date           Mar. 18, 2021
+#       @Version        v0.8
+#
+###
+
 import torch
 
 class CDetectorNet(torch.nn.Module):

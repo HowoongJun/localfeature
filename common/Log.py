@@ -1,3 +1,14 @@
+###
+#
+#       @Brief          Log.py
+#       @Details        Logging and printing function for debugging
+#       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
+#       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
+#       @Date           Mar. 18, 2021
+#       @Version        v0.3
+#
+###
+
 import logging, datetime
 import os, colorlog
 
