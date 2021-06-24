@@ -32,7 +32,7 @@ class CTrain():
             self.__model = nets.CDetectorNet().to(self.__device)
             self.__strCkptPath = self.__strCkptDetPath
             self.__loss = torch.nn.MSELoss()
-        elif(train_mode == "train_desc"):
+        elif(train_mode == "train_desc" or train_mode == "reinforce_desc"):
             self.__model = nets.CDescriptorNet().to(self.__device)
             self.__strCkptPath = self.__strCkptDescPath
             self.__loss = torch.nn.CosineEmbeddingLoss()
@@ -54,6 +54,8 @@ class CTrain():
             self.train_keypt()
         elif(train_mode == "train_desc"):
             self.train_desc()
+        elif(train_mode == "reinforce_desc"):
+            self.reinforce_desc()
 
     def train_keypt(self):
         self.__model.train(True)
@@ -61,13 +63,13 @@ class CTrain():
         sTrainIdx = 0
         for sBatch, data in enumerate(self.__train_loader):
             image, target = data['image'].to(self.__device, dtype=torch.float32), data['target'].to(self.__device, dtype=torch.float32)
-
             for i in range(0, 2):
                 self.__model.zero_grad()
-                output, _ = self.__model.forward(image)
+                output = self.__model.forward(image)
                 output = output[:, :-1, :]
                 output = torch.nn.functional.pixel_shuffle(output, 8)
-
+                target = target / 255.0
+                
                 loss = self.__loss(output, target)
                 loss.backward()
                 self.__optimizer.step()
@@ -87,13 +89,15 @@ class CTrain():
         for sBatch, data in enumerate(self.__train_loader):
             target = data['target'].to(self.__device, dtype=torch.float32)
             
-            for i in range(0, 4):
+            for i in range(0, 5):
                 self.__model.zero_grad()
-                image = data['image0.' + str(i + 2)].to(self.__device, dtype=torch.float32)
-
+                if(i < 4):
+                    image = data['image0.' + str(i + 2)].to(self.__device, dtype=torch.float32)
+                else:
+                    image = data['target'].to(self.__device, dtype=torch.float32)
+                
                 output_dark = self.__model.forward(image)
-                # output_origin = self.__model.forward(target)
-                output_origin = self.__sift_descriptor(target)
+                output_origin = self.__sift_descriptor(image)
 
                 loss = self.__loss(output_dark, output_origin, torch.Tensor([1]).to(self.__device))
                 if(math.isnan(loss.item())):
@@ -109,6 +113,36 @@ class CTrain():
                 sTrainIdx += 1
         oWriter.close()
         torch.save(self.__model.state_dict(), self.__strCkptDescPath)
+
+    def reinforce_desc(self):
+        self.__model.train(True)
+        sTrainIdx = 0
+        oWriter = SummaryWriter()
+        for sBatch, data in enumerate(self.__train_loader):
+            target = data['target'].to(self.__device, dtype=torch.float32)
+            
+            for i in range(0, 4):
+                self.__model.zero_grad()
+                image = data['image0.' + str(i + 2)].to(self.__device, dtype=torch.float32)
+
+                output_dark = self.__model.forward(image)
+                output_origin = self.__model.forward(target)
+
+                loss = self.__loss(output_dark, output_origin, torch.Tensor([1]).to(self.__device))
+                if(math.isnan(loss.item())):
+                    DebugPrint().warn("NaN!")
+                    continue
+                loss.backward()
+                self.__optimizer.step()
+                oWriter.add_scalar('loss_desc', loss, sTrainIdx)
+                if sTrainIdx % self.__sPrintStep == 0:
+                    DebugPrint().info("Step: " + str(sTrainIdx) + ", Loss: " + str(loss.item()))
+                    if(self.__device == "cuda"):
+                        DebugPrint().info("Cuda Status: " + str(self.__cudaStatus["allocated"]) + "/" + str(self.__cudaStatus["total"]))
+                sTrainIdx += 1
+        oWriter.close()
+        torch.save(self.__model.state_dict(), self.__strCkptDescPath)
+
 
     def __sift_descriptor(self, image):
         oSift = cv2.SIFT_create()
