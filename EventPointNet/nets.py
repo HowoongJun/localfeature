@@ -18,8 +18,8 @@ class CDetectorNet(torch.nn.Module):
         self.convKp1 = torch.nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
         self.convKp2 = torch.nn.Conv2d(256, 65, kernel_size=3, stride=1, padding=1)
 
-        self.convDsc1 = torch.nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
-        self.convDsc2 = torch.nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1)
+        # self.convDsc1 = torch.nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
+        # self.convDsc2 = torch.nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1)
 
     def forward(self, x):
         x = self.relu(self.conv1_1(x))
@@ -37,11 +37,11 @@ class CDetectorNet(torch.nn.Module):
         kpt = self.relu(self.convKp1(x))
         kpt = self.convKp2(kpt)
 
-        desc = self.relu(self.convDsc1(x))
-        desc = self.convDsc2(desc)
-        descNorm = torch.norm(desc, p=2, dim=1)
-        desc = desc.div(torch.unsqueeze(descNorm, 1))
-        return kpt, desc
+        # desc = self.relu(self.convDsc1(x))
+        # desc = self.convDsc2(desc)
+        # descNorm = torch.norm(desc, p=2, dim=1)
+        # desc = desc.div(torch.unsqueeze(descNorm, 1))
+        return kpt#, desc
 
         
 class CDescriptorNet(torch.nn.Module):
@@ -56,7 +56,9 @@ class CDescriptorNet(torch.nn.Module):
         self.conv2_2 = torch.nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
         self.conv3_1 = torch.nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
         self.conv3_2 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
-        self.conv4_1 = torch.nn.Conv2d(128, 128, kernel_size=7, stride=1, padding=3)
+        self.conv4_1 = torch.nn.Conv2d(128, 128, kernel_size=2, stride=1, padding=1)
+        self.conv4_2 = torch.nn.Conv2d(128, 128, kernel_size=2, stride=1, padding=1)
+        self.conv4_3 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1)
 
     def forward(self, x):
         x = self.relu(self.conv1_1(x))
@@ -68,7 +70,9 @@ class CDescriptorNet(torch.nn.Module):
         x = self.relu(self.conv3_1(x))
         x = self.relu(self.conv3_2(x))
         
-        desc = self.relu(self.conv4_1(x))
+        x = self.relu(self.conv4_1(x))
+        x = self.relu(self.conv4_2(x))
+        desc = self.relu(self.conv4_3(x))
 
         descNorm = torch.norm(desc, p=2, dim=1)
         desc = desc.div(torch.unsqueeze(descNorm, 1))
