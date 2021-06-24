@@ -10,7 +10,7 @@ import random
 class CDataset(Dataset):
     def __init__(self, dataPath, transforms=None):        
         self.__transforms = transforms
-        self.__targetPath = dataPath + "/event/"
+        self.__targetPath = dataPath + "/tsevent/"
         self.__trainPath = dataPath + "/image/"
         self.__dataPath = dataPath + "/dataloader/"
         self.__trainImageList = [os.path.basename(x) for x in glob(self.__trainPath + "*.png")]
@@ -31,7 +31,8 @@ class CDataset(Dataset):
         npyData = np.load(self.__dataPath + self.__dataList[idx])
 
         rotDeg = random.randrange(-90, 90)
-        image = io.imread(self.__trainPath + str(npyData['image']))
+        # image = io.imread(self.__trainPath + str(npyData['image']))
+        image = npyData['image']
         rotimage = transform.rotate(image, rotDeg)
         
         image = np.expand_dims(image, axis=0)
