@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           Mar. 18, 2021
-#       @Version        v0.17
+#       @Version        v0.18
 #
 ###
 
@@ -21,6 +21,7 @@ class CModel(CVisualLocalizationCore):
     def __init__(self):
         self.softmax = torch.nn.Softmax2d()
         self.__threshold = 3000
+        self.__bDescSift = True
 
     def __del__(self):
         print("CEventPointNet Destructor!")
@@ -33,12 +34,13 @@ class CModel(CVisualLocalizationCore):
             self.__oQueryModel = nets.CDetectorNet().to(self.__device)
             if(self.__gpuCheck):
                 self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint_detector.pth"))
-                self.__oDescModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint_descriptor.pth"))
+                if(not self.__bDescSift): self.__oDescModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint_descriptor.pth"))
             else:
                 self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint_detector.pth", map_location=torch.device("cpu")))
-                self.__oDescModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint_descriptor.pth", map_location=torch.device("cpu")))
-
-            self.__oSift = cv2.SIFT_create()
+                if(not self.__bDescSift): self.__oDescModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint_descriptor.pth", map_location=torch.device("cpu")))
+            if(self.__bDescSift == True):
+                self.__oSift = cv2.SIFT_create()
+                
             DebugPrint().info("Load Model Completed!")
 
     def Close(self):
@@ -52,13 +54,16 @@ class CModel(CVisualLocalizationCore):
         
     def Read(self):
         with torch.no_grad():
+            descDist = [[]]
+            if(self.__bDescSift == False):
+                self.__oDescModel.eval()
+                descDist = self.__oDescModel.forward(self.__Image)
+                descDist = descDist.data.cpu().numpy()
+
             self.__oQueryModel.eval()
-            self.__oDescModel.eval()
             kptDist = self.__oQueryModel.forward(self.__Image)
-            descDist = self.__oDescModel.forward(self.__Image)
             kptDist = self.softmax(kptDist)
             kptDist = kptDist.data.cpu().numpy()
-            descDist = descDist.data.cpu().numpy()
             kptDist = np.exp(kptDist)
             kptDist = kptDist / (np.sum(kptDist[0], axis=0)+.00001)
             kptDist = kptDist[:,:-1,:]
@@ -90,7 +95,7 @@ class CModel(CVisualLocalizationCore):
         heatmap = np.squeeze(heatmap, axis=0)
         heatmap_aligned = heatmap.reshape(-1)
         heatmap_aligned = np.sort(heatmap_aligned)[::-1]
-        xs, ys = np.where(heatmap >= 0.0156)#heatmap_aligned[threshold])
+        xs, ys = np.where(heatmap >= 0.015387)#heatmap_aligned[threshold])
         vKpt = []
         vDesc = []
         H, W = heatmap.shape
@@ -98,7 +103,7 @@ class CModel(CVisualLocalizationCore):
         pts[0, :] = ys
         pts[1, :] = xs
         pts[2, :] = heatmap[xs, ys]
-        pts, _ = self.__Nms_fast(pts, H, W, 4)
+        pts, _ = self.__Nms_fast(pts, H, W, 9)
         ys = pts[0, :]
         xs = pts[1, :]
         if(len(self.__ImageOriginal.shape) >= 3):
@@ -113,8 +118,8 @@ class CModel(CVisualLocalizationCore):
         for kptNo in range(len(xs)):
             vKpt_tmp = cv2.KeyPoint(int(ys[kptNo]), int(xs[kptNo]), 5.0)
             vKpt.append(vKpt_tmp)
-            # vDesc.append(desc[:, int(xs[kptNo]), int(ys[kptNo])])
-        _, vDesc = self.__oSift.compute(self.__ImageOriginal, vKpt)
+            if(not self.__bDescSift): vDesc.append(desc[:, int(xs[kptNo]), int(ys[kptNo])])
+        if(self.__bDescSift): _, vDesc = self.__oSift.compute(self.__ImageOriginal, vKpt)
         vDesc = np.array(vDesc)
         oHeatmap = ((heatmap - np.min(heatmap)) * 255 / (np.max(heatmap) - np.min(heatmap))).astype(np.uint8)
         return vKpt, vDesc, oHeatmap
