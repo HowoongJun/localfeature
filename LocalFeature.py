@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           Mar. 3, 2021
-#       @Version        v0.16
+#       @Version        v0.17
 #
 ###
 
@@ -54,7 +54,7 @@ class CVisualLocLocal(CVisualLocalizationCore):
     def Read(self):
         return self.__model.Read()
 
-    def Write(self, db, dbPath, train_mode="train_keypt"):
+    def Write(self, db, dbPath, train_mode="train"):
         self.__model.Write(db, dbPath, train_mode)
 
     def Setting(self, eCommand:int, Value=None):

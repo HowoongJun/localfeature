@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           May. 31, 2021
-#       @Version        v0.7
+#       @Version        v0.8
 #
 ###
 
@@ -32,7 +32,7 @@ parser.add_argument('--height', '-H', type=int, default=None, dest='height',
 parser.add_argument('--channel', '-c', type=int, default=3, dest='channel',
                     help='Image channel (default = 3)')
 parser.add_argument('--mode', '-o', type=str, dest='mode',
-                    help='Mode select: makedb, query, match, train_desc, train_keypt, reinforce_desc')
+                    help='Mode select: makedb, query, match, train')
 parser.add_argument('--query', '-q', type=str, dest='query',
                     help='Image query file path')
 parser.add_argument('--match', '-a', type=str, dest='match',
@@ -74,14 +74,6 @@ def queryCheck(oModel):
             cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmap)
     return True
 
-def checkGPU():
-    if(torch.cuda.is_available()):
-        log.DebugPrint().info("Using GPU.." + str(torch.cuda.get_device_name(torch.cuda.current_device())))
-        return True
-    else:
-        log.DebugPrint().info("Using CPU..")
-        return False
-
 def featureMatching(oModel):
     if(args.query == None or args.match == None):
         log.DebugPrint().error("No query / match path")
@@ -115,23 +107,11 @@ if __name__ == "__main__":
         log.DebugPrint().info("[Local] Matching Mode")
         model.Setting(eSettingCmd.eSettingCmd_THRESHOLD, args.threshold)
         featureMatching(model)
-    elif(args.mode == "train_keypt"):
-        log.DebugPrint().info("[Local] Train Keypoint Mode")
+    elif(args.mode == "train"):
+        log.DebugPrint().info("[Local] Train Mode")
         if(args.db == None):
             log.DebugPrint().error("[Local] No DB Path for Training!")
             sys.exit()
-        model.Write("MVSEC", args.db)
-    elif(args.mode == "train_desc"):
-        log.DebugPrint().info("[Local] Train Descriptor Mode")
-        if(args.db == None):
-            log.DebugPrint().error("[Local] No DB Path for Training!")
-            sys.exit()
-        model.Write("paris", args.db, args.mode)
-    elif(args.mode == "reinforce_desc"):
-        log.DebugPrint().info("[Local] Reinforcing Descriptor Mode")
-        if(args.db == None):
-            log.DebugPrint().error("[Local] No DB Path for Reinforcing!")
-            sys.exit()
-        model.Write("paris", args.db, args.mode)
+        model.Write("MVSEC", args.db, args.mode)
     else:
         log.DebugPrint().error("[Local] Wrong mode! Please check the mode again")
