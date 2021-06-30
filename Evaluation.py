@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           Jun. 24, 2021
-#       @Version        v0.1
+#       @Version        v0.2
 #
 ###
 
@@ -42,6 +42,7 @@ class CEvaluateLocalFeature():
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImage)
 
         vKpt, vDesc, oHeatmap = self.__oModel.Read()
+        DebugPrint().info("Keypoint number: " + str(len(vKpt)))
         oQuery = dict(image = oImageGray, keypoint = vKpt, descriptor = vDesc)
         oKptHandler = CKeypointHandler("query", oQuery)
         oKptHandler.Save("./result/KptResult_" + self.__strModel + "_" + str(os.path.basename(image_path)))
@@ -132,7 +133,7 @@ class CKeypointHandler():
                                         flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT)
         elif(self.__mode == "query"):
             if(len(self.__oQuery['keypoint']) == 0):
-                log.DebugPrint().info("No matching points")
+                DebugPrint().info("No matching points")
                 return False
 
             oImgResult = cv2.drawKeypoints(np.squeeze(self.__oQuery['image'], axis=0),
