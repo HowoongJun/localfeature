@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           May. 31, 2021
-#       @Version        v0.8
+#       @Version        v0.9
 #
 ###
 
@@ -24,7 +24,7 @@ from Evaluation import *
 
 parser = argparse.ArgumentParser(description='Test Local Feature')
 parser.add_argument('--model', '-m', type=str, default='mymodule', dest='model',
-                    help='Model select: mymodule, superpoint, eventpointnet, sift, orb, r2d2')
+                    help='Model select: superpoint, eventpointnet, sift, orb, akaze, kaze, brisk, r2d2')
 parser.add_argument('--width', '-W', type=int, default=None, dest='width',
                     help='Width for resize image')
 parser.add_argument('--height', '-H', type=int, default=None, dest='height',

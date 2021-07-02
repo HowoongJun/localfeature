@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           Mar. 3, 2021
-#       @Version        v0.17
+#       @Version        v0.18
 #
 ###
 
@@ -40,6 +40,18 @@ class CVisualLocLocal(CVisualLocalizationCore):
         elif model == "keynet":
             log.DebugPrint().info("Model: Key.Net")
             self.__module = imp.load_source(model, "./localfeature_ref/keynet/keynet.py")
+        elif model == "lift":
+            log.DebugPrint().info("Model: LIFT")
+            self.__module = imp.load_source(model, "./localfeature_ref/lift/lift.py")
+        elif model == "akaze":
+            log.DebugPrint().info("Model: AKAZE")
+            self.__module = imp.load_source(model, "./localfeature_ref/akaze/akaze.py")
+        elif model == "kaze":
+            log.DebugPrint().info("Model: KAZE")
+            self.__module = imp.load_source(model, "./localfeature_ref/kaze/kaze.py")
+        elif model == "brisk":
+            log.DebugPrint().info("Model: BRISK")
+            self.__module = imp.load_source(model, "./localfeature_ref/brisk/brisk.py")
 
     def __del__(self):
         self.Close()
