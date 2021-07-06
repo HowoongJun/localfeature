@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           May. 31, 2021
-#       @Version        v0.9
+#       @Version        v0.10
 #
 ###
 
@@ -79,17 +79,21 @@ def featureMatching(oModel):
         log.DebugPrint().error("No query / match path")
         return False
     if(os.path.isdir(args.query) or os.path.isdir(args.match)):
-        log.DebugPrint().error("Query/match should be file, not folder")
-        return False
-
+        queryFiles = readFolder(args.query)
+        matchFiles = readFolder(args.match)
+    else:
+        queryFiles = [args.query]
+        matchFiles = [args.match]
     oEvaluation = CEvaluateLocalFeature(oModel, args.model)
-    oHeatmapQuery, oHeatmapMatch = oEvaluation.Match(args.query, args.match, width=args.width, height=args.height, ransac=args.ransac)
-    
-    if(args.model == "eventpointnet" or args.model == "superpoint"):
-        if(oHeatmapQuery is not None):
-            cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmapQuery)
-        if(oHeatmapMatch is not None):
-            cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.match)), oHeatmapMatch)
+    for query in queryFiles:
+        for match in matchFiles:
+            oHeatmapQuery, oHeatmapMatch = oEvaluation.Match(query, match, width=args.width, height=args.height, ransac=args.ransac)
+            
+            if(args.model == "eventpointnet" or args.model == "superpoint"):
+                if(oHeatmapQuery is not None):
+                    cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(query)), oHeatmapQuery)
+                if(oHeatmapMatch is not None):
+                    cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(match)), oHeatmapMatch)
 
 if __name__ == "__main__":
     strModel = args.model
@@ -113,5 +117,11 @@ if __name__ == "__main__":
             log.DebugPrint().error("[Local] No DB Path for Training!")
             sys.exit()
         model.Write("MVSEC", args.db, args.mode)
+    elif(args.mode == "reinforce"):
+        log.DebugPrint().info("[Local] Reinforce Mode")
+        if(args.db == None):
+            log.DebugPrint().error("[Local] No DB Path for Reinforcing!")
+            sys.exit()
+        model.Write("paris", args.db, args.mode)
     else:
         log.DebugPrint().error("[Local] Wrong mode! Please check the mode again")
