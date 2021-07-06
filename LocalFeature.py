@@ -52,6 +52,9 @@ class CVisualLocLocal(CVisualLocalizationCore):
         elif model == "brisk":
             log.DebugPrint().info("Model: BRISK")
             self.__module = imp.load_source(model, "./localfeature_ref/brisk/brisk.py")
+        elif model == "lfnet":
+            log.DebugPrint().info("Model: LF-Net")
+            self.__module = imp.load_source(model, "./localfeature_ref/lfnet/lfnet.py")
 
     def __del__(self):
         self.Close()
