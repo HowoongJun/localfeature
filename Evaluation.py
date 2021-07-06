@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           Jun. 24, 2021
-#       @Version        v0.2
+#       @Version        v0.3
 #
 ###
 
@@ -15,6 +15,7 @@ from skimage import io, color
 from skimage.transform import resize
 from lcore.hal import eSettingCmd
 import os, cv2
+import time
 
 class CEvaluateLocalFeature():
     def __init__(self, model, model_name):
@@ -40,8 +41,9 @@ class CEvaluateLocalFeature():
         oImage, oImageGray = self.__ReadImage(image_path, width, height)
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oImageGray)
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImage)
-
+        ckTime = time.time()
         vKpt, vDesc, oHeatmap = self.__oModel.Read()
+        DebugPrint().info("Running Time: " + str(time.time() - ckTime))
         DebugPrint().info("Keypoint number: " + str(len(vKpt)))
         oQuery = dict(image = oImageGray, keypoint = vKpt, descriptor = vDesc)
         oKptHandler = CKeypointHandler("query", oQuery)
@@ -59,14 +61,18 @@ class CEvaluateLocalFeature():
 
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oQueryGray)
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oQuery)
+        ckTime = time.time()
         vQueryKpt, vQueryDesc, oQueryHeatmap = self.__oModel.Read()
+        DebugPrint().info("Running Time: " + str(time.time() - ckTime))
         DebugPrint().info("Query Keypt Number: " + str(len(vQueryKpt)))
         oQuery = dict(image = oQueryGray, keypoint=vQueryKpt, descriptor=vQueryDesc)
         self.__oModel.Reset()
 
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oMatchGray)
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oMatch)
+        ckTime = time.time()
         vMatchKpt, vMatchDesc, oMatchHeatmap = self.__oModel.Read()
+        DebugPrint().info("Running Time: " + str(time.time() - ckTime))
         DebugPrint().info("Match Keypt Number: " + str(len(vMatchKpt)))
         oMatch = dict(image = oMatchGray, keypoint=vMatchKpt, descriptor=vMatchDesc)
         self.__oModel.Reset()
