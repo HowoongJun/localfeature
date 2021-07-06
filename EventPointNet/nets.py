@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           Mar. 18, 2021
-#       @Version        v0.9
+#       @Version        v0.10
 #
 ###
 
@@ -17,31 +17,30 @@ class CEventPointNet(torch.nn.Module):
         self.relu = torch.nn.ReLU(inplace=True)
         self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2)
         
-        self.conv1_1 = torch.nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1)
-        self.conv1_2 = torch.nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
-        self.conv2_1_1 = torch.nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
+        self.conv1_1 = torch.nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
+        self.conv1_2 = torch.nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1)
+
+        self.conv2_1_1 = torch.nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
         self.conv2_1_2 = torch.nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
 
-        self.conv2_2_1 = torch.nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
-        self.conv2_2_2 = torch.nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
+        self.conv2_2_1 = torch.nn.Conv2d(32, 64, kernel_size=15, stride=1, padding=7)
+        self.conv2_2_2 = torch.nn.Conv2d(64, 64, kernel_size=15, stride=1, padding=7)
         
         self.conv3_1_1 = torch.nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
         self.conv3_1_2 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
 
-        self.conv3_2_1 = torch.nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
-        self.conv3_2_2 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
+        self.conv3_2_1 = torch.nn.Conv2d(64, 128, kernel_size=15, stride=1, padding=7)
+        self.conv3_2_2 = torch.nn.Conv2d(128, 128, kernel_size=15, stride=1, padding=7)
 
         self.conv4_1_1 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
         self.conv4_1_2 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
         
-        self.conv4_2_1 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
-        self.conv4_2_2 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
+        self.convDsc1 = torch.nn.Conv2d(128, 128, kernel_size=15, stride=1, padding=7)
+        self.convDsc2 = torch.nn.Conv2d(128, 128, kernel_size=15, stride=1, padding=7)
 
         self.convKp1 = torch.nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
         self.convKp2 = torch.nn.Conv2d(256, 65, kernel_size=3, stride=1, padding=1)
 
-        self.convDsc1 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
-        self.convDsc2 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
 
     def forward(self, x):
         x = self.relu(self.conv1_1(x))
@@ -60,8 +59,6 @@ class CEventPointNet(torch.nn.Module):
         desc = self.relu(self.conv2_2_2(desc))
         desc = self.relu(self.conv3_2_1(desc))
         desc = self.relu(self.conv3_2_2(desc))
-        desc = self.relu(self.conv4_2_1(desc))
-        desc = self.relu(self.conv4_2_2(desc))
 
         kpt = self.relu(self.convKp1(kpt))
         kpt = self.convKp2(kpt)

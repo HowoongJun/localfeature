@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           Mar. 18, 2021
-#       @Version        v0.19
+#       @Version        v0.20
 #
 ###
 
@@ -30,12 +30,13 @@ class CModel(CVisualLocalizationCore):
         self.__gpuCheck = bGPUFlag
         self.__device = "cuda" if self.__gpuCheck else "cpu"
         if(argsmode == 'query' or argsmode == 'match'):
-            self.__oQueryModel = nets.CDetectorNet().to(self.__device)
+            self.__oQueryModel = nets.CEventPointNet().to(self.__device)
             if(self.__gpuCheck):
                 self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint.pth"))
             else:
                 self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint.pth", map_location=torch.device("cpu")))
             if(self.__bDescSift == True):
+                DebugPrint().info("Descriptor: SIFT")
                 self.__oSift = cv2.SIFT_create()
                 
             DebugPrint().info("Load Model Completed!")
@@ -47,7 +48,10 @@ class CModel(CVisualLocalizationCore):
         oTrain = train.CTrain()
         oTrain.Open(db=db, dbPath=dbPath)
         if(oTrain.Setting(train_mode)):
-            oTrain.train()
+            if(train_mode == 'train'):
+                oTrain.train()
+            elif(train_mode == 'reinforce'):
+                oTrain.reinforce()
         
     def Read(self):
         with torch.no_grad():
@@ -80,7 +84,6 @@ class CModel(CVisualLocalizationCore):
         self.__Image = None
         self.__channel = None
 
-
     def __GenerateLocalFeature(self, keypoint_distribution, descriptor_distribution):
         heatmap = np.squeeze(keypoint_distribution, axis=0)
         heatmap = np.squeeze(heatmap, axis=0)
@@ -110,16 +113,15 @@ class CModel(CVisualLocalizationCore):
         uHeight, uWidth = targetImg.shape
 
         for kptNo in range(len(xs)):
-            if(not self.__bDescSift): 
-                desc = descriptor_distribution[ys[kptNo], xs[kptNo]]
+            if(not self.__bDescSift):
+                desc = descriptor_distribution[0][:, int(xs[kptNo]), int(ys[kptNo])]
                 vDesc.append(desc)
-                vKpt_tmp = cv2.KeyPoint(int(ys[kptNo]), int(xs[kptNo]), 5.0)
-                vKpt.append(vKpt_tmp)
+            vKpt_tmp = cv2.KeyPoint(int(ys[kptNo]), int(xs[kptNo]), 5.0)
+            vKpt.append(vKpt_tmp)
         if(self.__bDescSift): _, vDesc = self.__oSift.compute(self.__ImageOriginal, vKpt)
         vDesc = np.array(vDesc)
 
         oHeatmap = ((heatmap - np.min(heatmap)) * 255 / (np.max(heatmap) - np.min(heatmap))).astype(np.uint8)
-        DebugPrint().info(str(len(vKpt)) + "," + str(len(vDesc)))
         return vKpt, vDesc, oHeatmap
 
     def __Nms_fast(self, in_corners, H, W, dist_thresh):
