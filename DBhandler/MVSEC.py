@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           Mar. 26, 2021
-#       @Version        v0.12
+#       @Version        v0.13
 #
 ###
 
@@ -55,8 +55,19 @@ class CDataset(Dataset):
 
         target = np.expand_dims(target, axis=0)
         rottarget = np.expand_dims(rottarget, axis=0)
-        
-        result = {'image': image, 'target': target, 'rotimage': rotimage, 'rottarget': rottarget}
+
+        bright0 = (((image / 255.0) ** (1.0 / 1.5)) * 255).astype(np.uint8)
+        bright1 = (((image / 255.0) ** (1.0 / 2.0)) * 255).astype(np.uint8)
+        bright2 = (((image / 255.0) ** (1.0 / 2.5)) * 255).astype(np.uint8)
+
+        dark0 = (((image / 255.0) ** (1.0 / 0.8)) ** 255).astype(np.uint8)
+        dark1 = (((image / 255.0) ** (1.0 / 0.5)) ** 255).astype(np.uint8)
+        dark2 = (((image / 255.0) ** (1.0 / 0.2)) ** 255).astype(np.uint8)
+
+        result = {'image': image, 'target': target,
+                  'rotimage': rotimage, 'rottarget': rottarget,
+                  'bright0': bright0, 'bright1': bright1, 'bright2': bright2,
+                  'dark0': dark0, 'dark1': dark1, 'dark2': dark2}
 
         if self.__transforms:
             result = self.__transforms(result)
