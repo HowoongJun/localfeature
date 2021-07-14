@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           Mar. 18, 2021
-#       @Version        v0.10
+#       @Version        v0.11
 #
 ###
 
@@ -23,20 +23,20 @@ class CEventPointNet(torch.nn.Module):
         self.conv2_1_1 = torch.nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
         self.conv2_1_2 = torch.nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
 
-        self.conv2_2_1 = torch.nn.Conv2d(32, 64, kernel_size=15, stride=1, padding=7)
-        self.conv2_2_2 = torch.nn.Conv2d(64, 64, kernel_size=15, stride=1, padding=7)
+        self.conv2_2_1 = torch.nn.Conv2d(32, 64, kernel_size=5, stride=1, padding=2)
+        self.conv2_2_2 = torch.nn.Conv2d(64, 64, kernel_size=5, stride=1, padding=2)
         
         self.conv3_1_1 = torch.nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
         self.conv3_1_2 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
 
-        self.conv3_2_1 = torch.nn.Conv2d(64, 128, kernel_size=15, stride=1, padding=7)
-        self.conv3_2_2 = torch.nn.Conv2d(128, 128, kernel_size=15, stride=1, padding=7)
+        self.conv3_2_1 = torch.nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=2)
+        self.conv3_2_2 = torch.nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2)
 
         self.conv4_1_1 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
         self.conv4_1_2 = torch.nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1)
         
-        self.convDsc1 = torch.nn.Conv2d(128, 128, kernel_size=15, stride=1, padding=7)
-        self.convDsc2 = torch.nn.Conv2d(128, 128, kernel_size=15, stride=1, padding=7)
+        self.convDsc1 = torch.nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2)
+        self.convDsc2 = torch.nn.Conv2d(128, 128, kernel_size=5, stride=1, padding=2)
 
         self.convKp1 = torch.nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
         self.convKp2 = torch.nn.Conv2d(256, 65, kernel_size=3, stride=1, padding=1)
@@ -65,8 +65,10 @@ class CEventPointNet(torch.nn.Module):
 
         desc = self.relu(self.convDsc1(desc))
         desc = self.convDsc2(desc)
+
         descNorm = torch.norm(desc, p=2, dim=1)
         desc = desc.div(torch.unsqueeze(descNorm, 1))
+
         return kpt, desc
 
         
