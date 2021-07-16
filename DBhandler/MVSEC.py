@@ -42,19 +42,31 @@ class CDataset(Dataset):
             idx = len(self.__dataList) - 1
         npyData = np.load(self.__dataPath + self.__dataList[idx])
 
+        homSize = random.uniform(0.5, 1.0)
+        homProj = random.uniform(-0.003, 0.003)
+        hommatrixsize = np.array([[homSize, 0.0, 0.0], [0.0, homSize, 0.0], [0.0, 0.0, 1.0]])
+        hommatrixproj = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [homProj, homProj, 1.0]])
+        transformsize = transform.ProjectiveTransform(matrix=hommatrixsize)
+        transformproj = transform.ProjectiveTransform(matrix=hommatrixproj)
         rotDeg = random.randrange(-90, 90)
-        # image = io.imread(self.__trainPath + str(npyData['image']))
+        
         image = npyData['image']
         rotimage = transform.rotate(image, rotDeg)
-        
+        homimage = transform.warp(image, transformsize.inverse)
+        homimage = transform.warp(homimage, transformproj.inverse)
+
         image = np.expand_dims(image, axis=0)
         rotimage = np.expand_dims(rotimage, axis=0)
-        
+        homimage = np.expand_dims(homimage, axis=0)
+
         target = npyData['tsimagenormalized']
         rottarget = transform.rotate(target, rotDeg)
+        homtarget = transform.warp(target, transformsize.inverse)
+        homtarget = transform.warp(homtarget, transformproj.inverse)
 
         target = np.expand_dims(target, axis=0)
         rottarget = np.expand_dims(rottarget, axis=0)
+        homtarget = np.expand_dims(homtarget, axis=0)
 
         bright0 = (((image / 255.0) ** (1.0 / 1.5)) * 255).astype(np.uint8)
         bright1 = (((image / 255.0) ** (1.0 / 2.0)) * 255).astype(np.uint8)
@@ -66,6 +78,7 @@ class CDataset(Dataset):
 
         result = {'image': image, 'target': target,
                   'rotimage': rotimage, 'rottarget': rottarget,
+                  'homimage': homimage, 'homtarget': homtarget,
                   'bright0': bright0, 'bright1': bright1, 'bright2': bright2,
                   'dark0': dark0, 'dark1': dark1, 'dark2': dark2}
 
