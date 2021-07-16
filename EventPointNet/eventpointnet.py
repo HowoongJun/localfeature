@@ -16,6 +16,7 @@ import EventPointNet.nets as nets
 import numpy as np
 import torch, cv2
 from common.Log import DebugPrint
+import time
 
 class CModel(CVisualLocalizationCore):
     def __init__(self):
@@ -58,11 +59,10 @@ class CModel(CVisualLocalizationCore):
             self.__oQueryModel.eval()
             kptDist, descDist = self.__oQueryModel.forward(self.__Image)
             kptDist = self.softmax(kptDist)
-            kptDist = kptDist.data.cpu().numpy()
-            kptDist = np.exp(kptDist)
-            kptDist = kptDist / (np.sum(kptDist[0], axis=0)+.00001)
+            kptDist = torch.exp(kptDist)
+            kptDist = torch.div(kptDist, (torch.sum(kptDist[0], axis=0)+.00001))
             kptDist = kptDist[:,:-1,:]
-            kptDist = torch.nn.functional.pixel_shuffle(torch.from_numpy(kptDist).to(self.__device), 8)
+            kptDist = torch.nn.functional.pixel_shuffle(kptDist, 8)
             kptDist = kptDist.data.cpu().numpy()
             descDist = descDist.data.cpu().numpy()
             kpt, desc, heatmap = self.__GenerateLocalFeature(kptDist, descDist)
@@ -103,16 +103,12 @@ class CModel(CVisualLocalizationCore):
         if(len(self.__ImageOriginal.shape) >= 3):
             self.__ImageOriginal = np.squeeze(self.__ImageOriginal, axis=0)
         
-        vKeyptLoc = pts[:2, :]
-        vKeyptLoc = np.transpose(vKeyptLoc)
-        vKeyptLoc = np.expand_dims(np.expand_dims(vKeyptLoc, axis=0), axis=0)
-        tKeyptLoc = torch.from_numpy(vKeyptLoc.copy()).cuda().float()
-
         targetImg = self.__Image
         targetImg = torch.squeeze(torch.squeeze(targetImg, axis=0), axis=0)
         uHeight, uWidth = targetImg.shape
-
+        uOffset = 7
         for kptNo in range(len(xs)):
+            if(xs[kptNo] > uHeight - uOffset or xs[kptNo] < uOffset or ys[kptNo] > uWidth - uOffset or ys[kptNo] < uOffset): continue
             if(not self.__bDescSift):
                 desc = descriptor_distribution[0][:, int(xs[kptNo]), int(ys[kptNo])]
                 vDesc.append(desc)
@@ -125,8 +121,8 @@ class CModel(CVisualLocalizationCore):
         return vKpt, vDesc, oHeatmap
 
     def __Nms_fast(self, in_corners, H, W, dist_thresh):
-        grid = np.zeros((H, W)).astype(int) 
-        inds = np.zeros((H, W)).astype(int) 
+        mGrid = np.zeros((H, W)).astype(int) 
+        mInds = np.zeros((H, W)).astype(int) 
         
         inds1 = np.argsort(-in_corners[2,:])
         corners = in_corners[:,inds1]
@@ -139,24 +135,24 @@ class CModel(CVisualLocalizationCore):
             return out, np.zeros((1)).astype(int)
         
         for i, rc in enumerate(rcorners.T):
-            grid[rcorners[1,i], rcorners[0,i]] = 1
-            inds[rcorners[1,i], rcorners[0,i]] = i
+            mGrid[rcorners[1,i], rcorners[0,i]] = 1
+            mInds[rcorners[1,i], rcorners[0,i]] = i
         
         pad = dist_thresh
-        grid = np.pad(grid, ((pad,pad), (pad,pad)), mode='constant')
+        mGrid = np.pad(mGrid, ((pad,pad), (pad,pad)), mode='constant')
         
         count = 0
         for i, rc in enumerate(rcorners.T):
         
             pt = (rc[0]+pad, rc[1]+pad)
-            if grid[pt[1], pt[0]] == 1:
-                grid[pt[1]-pad:pt[1]+pad+1, pt[0]-pad:pt[0]+pad+1] = 0
-                grid[pt[1], pt[0]] = -1
+            if mGrid[pt[1], pt[0]] == 1:
+                mGrid[pt[1]-pad:pt[1]+pad+1, pt[0]-pad:pt[0]+pad+1] = 0
+                mGrid[pt[1], pt[0]] = -1
                 count += 1
         
-        keepy, keepx = np.where(grid==-1)
+        keepy, keepx = np.where(mGrid==-1)
         keepy, keepx = keepy - pad, keepx - pad
-        inds_keep = inds[keepy, keepx]
+        inds_keep = mInds[keepy, keepx]
         out = corners[:, inds_keep]
         values = out[-1, :]
         inds2 = np.argsort(-values)
