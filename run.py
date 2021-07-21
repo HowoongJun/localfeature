@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           May. 31, 2021
-#       @Version        v0.10
+#       @Version        v0.11
 #
 ###
 
@@ -21,10 +21,11 @@ import common.Log as log
 import numpy as np
 import time
 from Evaluation import *
+import draw
 
 parser = argparse.ArgumentParser(description='Test Local Feature')
-parser.add_argument('--model', '-m', type=str, default='mymodule', dest='model',
-                    help='Model select: superpoint, eventpointnet, sift, orb, akaze, kaze, brisk, r2d2')
+parser.add_argument('--model', '-m', type=str, default='eventpointnet', dest='model',
+                    help='Model select: superpoint, eventpointnet, lfnet, sift, orb, akaze, kaze, brisk, r2d2')
 parser.add_argument('--width', '-W', type=int, default=None, dest='width',
                     help='Width for resize image')
 parser.add_argument('--height', '-H', type=int, default=None, dest='height',
@@ -43,6 +44,8 @@ parser.add_argument('--db', '-d', type=str, dest='db', default=None,
                     help='DB path for training')
 parser.add_argument('--ransac', '-r', type=float, default=100.0, dest='ransac',
                     help='RANSAC Threshold value')
+parser.add_argument('--gpu', '-g', type=int, default=1, dest='gpu',
+                    help='Use GPU (1/0)')
 
 args = parser.parse_args()
 
@@ -87,6 +90,7 @@ def featureMatching(oModel):
     oEvaluation = CEvaluateLocalFeature(oModel, args.model)
     for query in queryFiles:
         for match in matchFiles:
+            if(query == match): continue
             oHeatmapQuery, oHeatmapMatch = oEvaluation.Match(query, match, width=args.width, height=args.height, ransac=args.ransac)
             
             if(args.model == "eventpointnet" or args.model == "superpoint"):
@@ -95,11 +99,35 @@ def featureMatching(oModel):
                 if(oHeatmapMatch is not None):
                     cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(match)), oHeatmapMatch)
 
+def slam(oModel):
+    if(args.query == None):
+        log.DebugPrint().error("No query / match path")
+        return False
+    if(os.path.isdir(args.query)):
+        queryFiles = readFolder(args.query)
+    else:
+        queryFiles = [args.query]
+    oDraw = draw.CDraw(args.model)
+    oEvaluation = CEvaluateLocalFeature(oModel, args.model)
+    vTrans = np.array([0, 0, 0])
+    vRot = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    vPoseDraw = [vTrans.tolist()]
+    for i in range(0,len(queryFiles) - 1):
+        log.DebugPrint().info(os.path.basename(queryFiles[i]) + " and " + os.path.basename(queryFiles[i + 1]))
+        imageQuery = cv2.imread(queryFiles[i])
+        
+        vRot, vTrans = oEvaluation.SLAM(queryFiles[i], queryFiles[i+1], vRot, vTrans, width=args.width, height=args.height, ransac=args.ransac)
+        vPoseDraw.append(vTrans.tolist())
+        
+        if(i % 100 == 0):
+            oDraw.draw2D(vPoseDraw)
+    oDraw.draw2D(vPoseDraw)
+
 if __name__ == "__main__":
     strModel = args.model
 
     model = CVisualLocLocal(strModel)
-    model.Open(args.mode)
+    model.Open(args.mode, args.gpu)
     model.Setting(eSettingCmd.eSettingCmd_IMAGE_CHANNEL, args.channel)
     if(args.mode == "makedb"):
         log.DebugPrint().info("[Local] DB Creation Mode")
@@ -123,5 +151,8 @@ if __name__ == "__main__":
             log.DebugPrint().error("[Local] No DB Path for Reinforcing!")
             sys.exit()
         model.Write("paris", args.db, args.mode)
+    elif(args.mode == "slam"):
+        log.DebugPrint().info("[Local] SLAM Mode")
+        slam(model)
     else:
         log.DebugPrint().error("[Local] Wrong mode! Please check the mode again")

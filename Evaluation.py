@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           Jun. 24, 2021
-#       @Version        v0.3
+#       @Version        v0.4
 #
 ###
 
@@ -86,6 +86,44 @@ class CEvaluateLocalFeature():
         
         return oQueryHeatmap, oMatchHeatmap
 
+    def SLAM(self, query_path, match_path, prevR, prevT, width=None, height=None, ransac = 1.0):
+        if(self.__oModel == None):
+            DebugPrint().error("Model is None")
+            return False
+
+        oQuery, oQueryGray = self.__ReadImage(query_path, width, height)
+        oMatch, oMatchGray = self.__ReadImage(match_path, width, height)
+
+        self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oQueryGray)
+        self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oQuery)
+        ckTime = time.time()
+        vQueryKpt, vQueryDesc, oQueryHeatmap = self.__oModel.Read()
+        DebugPrint().info("Running Time: " + str(time.time() - ckTime))
+        DebugPrint().info("Query Keypt Number: " + str(len(vQueryKpt)))
+        oQuery = dict(image = oQueryGray, keypoint=vQueryKpt, descriptor=vQueryDesc)
+        self.__oModel.Reset()
+
+        self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oMatchGray)
+        self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oMatch)
+        ckTime = time.time()
+        vMatchKpt, vMatchDesc, oMatchHeatmap = self.__oModel.Read()
+        DebugPrint().info("Running Time: " + str(time.time() - ckTime))
+        DebugPrint().info("Match Keypt Number: " + str(len(vMatchKpt)))
+        oMatch = dict(image = oMatchGray, keypoint=vMatchKpt, descriptor=vMatchDesc)
+        self.__oModel.Reset()
+        
+        oKptMatcher = CKeypointHandler("match", oQuery, oMatch)
+        oKptMatcher.Matching("bruteforce", self.__strModel, ransac=ransac)
+        vMatches = oKptMatcher.Read()
+
+        vQueryKpt = np.int32([vQueryKpt[m.queryIdx].pt for m in vMatches])
+        vMatchKpt = np.int32([vMatchKpt[m.trainIdx].pt for m in vMatches])
+  
+        E, mask = cv2.findEssentialMat(vQueryKpt, vMatchKpt, focal=718.8560, pp=(607.1928, 185.2157), prob=0.999)
+        _, R, T, mask = cv2.recoverPose(E, vQueryKpt, vMatchKpt, focal=718.8560, pp=(607.1928, 185.2157))
+
+        return prevR.dot(R), prevT + prevR.dot(T[:,0])
+        
 class CKeypointHandler():
     def __init__(self, mode, query, match=None):
         self.__mode = mode
@@ -114,6 +152,9 @@ class CKeypointHandler():
             vKpSetMatch = np.float32([self.__oMatch['keypoint'][m.trainIdx].pt for m in self.__vMatches]).reshape(-1, 1, 2)
             _, self.__matchesMask = cv2.findHomography(vKpSetQuery, vKpSetMatch, cv2.RANSAC, ransac)
             DebugPrint().info("Matching Number (RANSAC): " + str(np.sum(self.__matchesMask)))
+    
+    def Read(self):
+        return self.__vMatches
 
     def Reset(self):
         self.__vMatches = None
