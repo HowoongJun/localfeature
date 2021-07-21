@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           Mar. 3, 2021
-#       @Version        v0.18
+#       @Version        v0.18.1
 #
 ###
 
@@ -59,8 +59,10 @@ class CVisualLocLocal(CVisualLocalizationCore):
     def __del__(self):
         self.Close()
 
-    def Open(self, argsmode):
+    def Open(self, argsmode, usegpu):
         self.__model = self.__module.CModel()
+        if(usegpu == True and self.__gpuCheck == True): self.__gpuCheck = True
+        elif(usegpu == False): self.__gpuCheck= False
         self.__model.Open(self.__gpuCheck, argsmode)
     
     def Close(self):
