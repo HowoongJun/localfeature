@@ -53,9 +53,10 @@ def readFolder(strImgFolder):
     if(not os.path.isdir(strImgFolder)):
         log.DebugPrint().warning("Path does not exist!")
         return False
-    strPngList = [x for x in glob(strImgFolder + "*.png")]
-    strJpgList = [x for x in glob(strImgFolder + "*.jpg")]
-    strFileList = strPngList + strJpgList
+    strPngList = [x for x in glob(strImgFolder + "/*.png")]
+    strJpgList = [x for x in glob(strImgFolder + "/*.jpg")]
+    strPpmList = [x for x in glob(strImgFolder + "/*.ppm")]
+    strFileList = strPngList + strJpgList + strPpmList
     strFileList.sort()
     return strFileList
 
@@ -63,41 +64,61 @@ def queryCheck(oModel):
     if(args.query == None):
         log.DebugPrint().error("No query path")
         return False
+    strFileList = []
     if(os.path.isdir(args.query)):
-        strFileList = readFolder(args.query)
+        strFolderList = [x[0] for x in os.walk(args.query)]
+        for f in strFolderList:
+            strFileList += readFolder(f)
     else:
         strFileList = [args.query]
-    if(strFileList is False):
+    if(strFileList == []):
+        log.DebugPrint().error("No File")
         return False
     oEvaluation = CEvaluateLocalFeature(oModel, args.model)
+    uCount = 0
+    fTotalTime = 0
     for fileIdx in strFileList:
-        vKpt, vDesc, oHeatmap = oEvaluation.Query(fileIdx, args.width, args.height)
-        
-        if(args.model == "eventpointnet" or args.model == "superpoint"):
-            cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmap)
+        vKpt, vDesc, oHeatmap, fTime = oEvaluation.Query(fileIdx, args.width, args.height)
+        uCount += 1
+        fTotalTime += fTime
+        # if(args.model == "eventpointnet" or args.model == "superpoint"):
+        #     cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmap)
+    log.DebugPrint().info("========= Result of " + str(args.model) + "==========")
+    log.DebugPrint().info("Total Time: " + str(fTotalTime))
+    log.DebugPrint().info("Average Time: " + str(fTotalTime / uCount))
+
     return True
 
 def featureMatching(oModel):
     if(args.query == None or args.match == None):
         log.DebugPrint().error("No query / match path")
         return False
+    strQueryfileList = []
+    strMatchfileList = []
     if(os.path.isdir(args.query) or os.path.isdir(args.match)):
+        strQueryList = [x[0] for x in os.walk(args.query)]
+        strMatchList = [x[0] for x in os.walk(args.match)]
+        for f in strQueryList:
+            strQueryfileList += [readFolder(f)]
+        for f in strMatchList:
+            strMatchfileList += [readFolder(f)]
         queryFiles = readFolder(args.query)
         matchFiles = readFolder(args.match)
     else:
-        queryFiles = [args.query]
-        matchFiles = [args.match]
+        strQueryfileList = [[args.query]]
+        strMatchfileList = [[args.match]]
     oEvaluation = CEvaluateLocalFeature(oModel, args.model)
-    for query in queryFiles:
-        for match in matchFiles:
-            if(query == match): continue
-            oHeatmapQuery, oHeatmapMatch = oEvaluation.Match(query, match, width=args.width, height=args.height, ransac=args.ransac)
-            
-            if(args.model == "eventpointnet" or args.model == "superpoint"):
-                if(oHeatmapQuery is not None):
-                    cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(query)), oHeatmapQuery)
-                if(oHeatmapMatch is not None):
-                    cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(match)), oHeatmapMatch)
+    for i in range(0, len(strQueryfileList)):
+        for query in strQueryfileList[i]:
+            for match in strMatchfileList[i]:
+                if(query >= match): continue
+                oHeatmapQuery, oHeatmapMatch = oEvaluation.Match(query, match, width=args.width, height=args.height, ransac=args.ransac)
+                
+                # if(args.model == "eventpointnet" or args.model == "superpoint"):
+                #     if(oHeatmapQuery is not None):
+                #         cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(query)), oHeatmapQuery)
+                #     if(oHeatmapMatch is not None):
+                #         cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(match)), oHeatmapMatch)
 
 def slam(oModel):
     if(args.query == None):
@@ -107,10 +128,11 @@ def slam(oModel):
         queryFiles = readFolder(args.query)
     else:
         queryFiles = [args.query]
-    oDraw = draw.CDraw(args.model)
+    vResultPath = args.query.split(os.path.sep)
+    oDraw = draw.CDraw(args.model, vResultPath[-3])
     oEvaluation = CEvaluateLocalFeature(oModel, args.model)
     vTrans = np.array([0, 0, 0])
-    vRot = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    vRot = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
     vPoseDraw = [vTrans.tolist()]
     for i in range(0,len(queryFiles) - 1):
         log.DebugPrint().info(os.path.basename(queryFiles[i]) + " and " + os.path.basename(queryFiles[i + 1]))
@@ -122,6 +144,45 @@ def slam(oModel):
         if(i % 100 == 0):
             oDraw.draw2D(vPoseDraw)
     oDraw.draw2D(vPoseDraw)
+
+def hpatches(oModel):
+    if(args.query == None):
+        log.DebugPrint().error("Please write hpatches sequence folder in the --query argument")
+        return False
+    strHpatchesList = os.listdir(args.query)
+    oEvaluation = CEvaluateLocalFeature(oModel, args.model)
+    uCountIdx = 0
+    uCount_i = 0
+    uCount_v = 0
+    fTotalMScore = 0
+    f_iMScore = 0
+    f_vMScore = 0
+    fRecTime = 0
+    vResult = dict()
+    for strHpatches in strHpatchesList:
+        strHpatchesQueryList = readFolder(args.query + strHpatches + "/")
+        query = args.query + strHpatches + "/1.ppm"
+        fOneMScore = 0
+        # for query in strHpatchesQueryList:
+        for match in strHpatchesQueryList:
+            if(query >= match): continue
+            fMScore, _ = oEvaluation.HPatches(query, match, ransac=args.ransac)
+            uCountIdx += 1
+            fTotalMScore += fMScore
+            fOneMScore += fMScore
+            if(strHpatches[0] == 'i'):
+                uCount_i += 1
+                f_iMScore += fMScore
+            elif(strHpatches[0] == 'v'):
+                uCount_v += 1
+                f_vMScore += fMScore
+        vResult[strHpatches] = fOneMScore / (len(strHpatchesQueryList) - 1)
+        log.DebugPrint().info(vResult[strHpatches])
+    np.save('./result/HPATCHES_' + str(args.model), vResult)
+    log.DebugPrint().info("================= Result of " + str(args.model) + "=========================")
+    log.DebugPrint().info("Matching Score Total: " + str(fTotalMScore / uCountIdx))
+    log.DebugPrint().info("Matching Score Illumination: " + str(f_iMScore / uCount_i))
+    log.DebugPrint().info("Matching Score Viewpoint: " + str(f_vMScore / uCount_v))
 
 if __name__ == "__main__":
     strModel = args.model
@@ -154,5 +215,8 @@ if __name__ == "__main__":
     elif(args.mode == "slam"):
         log.DebugPrint().info("[Local] SLAM Mode")
         slam(model)
+    elif(args.mode == "hpatches"):
+        log.DebugPrint().info("[Local] Hpatches Evaluation Mode")
+        hpatches(model)
     else:
         log.DebugPrint().error("[Local] Wrong mode! Please check the mode again")

@@ -43,14 +43,20 @@ class CEvaluateLocalFeature():
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oImage)
         ckTime = time.time()
         vKpt, vDesc, oHeatmap = self.__oModel.Read()
-        DebugPrint().info("Running Time: " + str(time.time() - ckTime))
+        fSaveTime = time.time() - ckTime
+        DebugPrint().info("Running Time: " + str(fSaveTime))
         DebugPrint().info("Keypoint number: " + str(len(vKpt)))
         oQuery = dict(image = oImageGray, keypoint = vKpt, descriptor = vDesc)
         oKptHandler = CKeypointHandler("query", oQuery)
-        oKptHandler.Save("./result/KptResult_" + self.__strModel + "_" + str(os.path.basename(image_path)))
+        vResultPath = image_path.split(os.path.sep)
+        strResultPath = "./result/" + vResultPath[-3] + "/" + vResultPath[-2] + "/"
+        if(not os.path.isdir(strResultPath)):
+            os.makedirs(strResultPath)
+        vImageName = os.path.splitext(os.path.basename(image_path))
+        oKptHandler.Save(strResultPath + "/KptResult_" + vImageName[0] + "_" + self.__strModel + vImageName[1])
         oKptHandler.Reset()
         self.__oModel.Reset()
-        return vKpt, vDesc, oHeatmap
+        return vKpt, vDesc, oHeatmap, fSaveTime
 
     def Match(self, query_path, match_path, width=None, height=None, ransac=100.0):
         if(self.__oModel == None):
@@ -79,10 +85,16 @@ class CEvaluateLocalFeature():
         
         oKptMatcher = CKeypointHandler("match", oQuery, oMatch)
         oKptMatcher.Matching("bruteforce", self.__strModel, ransac=ransac)
+        
+        vResultPath = query_path.split(os.path.sep)
+        strResultPath = "./result/" + vResultPath[-3] + "/" + vResultPath[-2] + "/"
+        if(not os.path.isdir(strResultPath)):
+            os.makedirs(strResultPath)
 
+        vMatchName = os.path.splitext(os.path.basename(match_path))
         strQueryName = os.path.splitext(os.path.basename(query_path))[0]
-        strMatchName = os.path.basename(match_path)
-        oKptMatcher.Save("./result/MatchedResult_" + str(self.__strModel) + str(strQueryName) + "_" + str(strMatchName))
+        # strMatchName = os.path.basename(match_path)
+        oKptMatcher.Save(strResultPath + "/MatchedResult_" + str(strQueryName) + "_" + str(vMatchName[0]) + "_" + self.__strModel + str(vMatchName[1]))
         
         return oQueryHeatmap, oMatchHeatmap
 
@@ -102,7 +114,7 @@ class CEvaluateLocalFeature():
         DebugPrint().info("Query Keypt Number: " + str(len(vQueryKpt)))
         oQuery = dict(image = oQueryGray, keypoint=vQueryKpt, descriptor=vQueryDesc)
         self.__oModel.Reset()
-
+        oMatchGray = (((oMatchGray / 255.0) ** (1.0 / 0.2)) * 255).astype(np.uint8)
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oMatchGray)
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oMatch)
         ckTime = time.time()
@@ -124,6 +136,43 @@ class CEvaluateLocalFeature():
 
         return prevR.dot(R), prevT + prevR.dot(T[:,0])
         
+    def HPatches(self, query_path, match_path, ransac=100.0):
+        if(self.__oModel == None):
+            DebugPrint().error("Model is None")
+            return False
+        oQuery, oQueryGray = self.__ReadImage(query_path, None, None)
+        oMatch, oMatchGray = self.__ReadImage(match_path, None, None)
+
+        self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oQueryGray)
+        self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oQuery)
+        ckTime = time.time()
+        vQueryKpt, vQueryDesc, oQueryHeatmap = self.__oModel.Read()
+        fRecTime = time.time() - ckTime
+        DebugPrint().info("Running Time: " + str(time.time() - ckTime))
+        DebugPrint().info("Query Keypt Number: " + str(len(vQueryKpt)))
+        oQuery = dict(image = oQueryGray, keypoint=vQueryKpt, descriptor=vQueryDesc)
+        self.__oModel.Reset()
+
+        self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oMatchGray)
+        self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oMatch)
+        ckTime = time.time()
+        vMatchKpt, vMatchDesc, oMatchHeatmap = self.__oModel.Read()
+        DebugPrint().info("Running Time: " + str(time.time() - ckTime))
+        DebugPrint().info("Match Keypt Number: " + str(len(vMatchKpt)))
+        oMatch = dict(image = oMatchGray, keypoint=vMatchKpt, descriptor=vMatchDesc)
+        self.__oModel.Reset()
+        
+        oKptMatcher = CKeypointHandler("match", oQuery, oMatch)
+        oKptMatcher.Matching("bruteforce", self.__strModel, ransac=ransac)
+        uMatchingNum = oKptMatcher.GetMatchingNumber()
+        fMScore = (uMatchingNum / len(vQueryKpt) + uMatchingNum / len(vMatchKpt)) / 2
+        
+        # strQueryName = os.path.splitext(os.path.basename(query_path))[0]
+        # strMatchName = os.path.basename(match_path)
+        # oKptMatcher.Save("./result/MatchedResult_" + str(self.__strModel) + str(strQueryName) + "_" + str(strMatchName))
+        
+        return fMScore, fRecTime
+
 class CKeypointHandler():
     def __init__(self, mode, query, match=None):
         self.__mode = mode
@@ -132,6 +181,7 @@ class CKeypointHandler():
         self.__oMatch = match
         self.__oImgMatch = None
         self.__matchesMask = None
+        self.__uMatchingNumber = 0
 
     def Matching(self, matching, model, ransac=-1):
         oMatcher = None
@@ -152,6 +202,10 @@ class CKeypointHandler():
             vKpSetMatch = np.float32([self.__oMatch['keypoint'][m.trainIdx].pt for m in self.__vMatches]).reshape(-1, 1, 2)
             _, self.__matchesMask = cv2.findHomography(vKpSetQuery, vKpSetMatch, cv2.RANSAC, ransac)
             DebugPrint().info("Matching Number (RANSAC): " + str(np.sum(self.__matchesMask)))
+            self.__uMatchingNumber = np.sum(self.__matchesMask)
+    
+    def GetMatchingNumber(self):
+        return self.__uMatchingNumber
     
     def Read(self):
         return self.__vMatches
