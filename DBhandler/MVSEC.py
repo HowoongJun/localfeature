@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           Mar. 26, 2021
-#       @Version        v0.13
+#       @Version        v0.14
 #
 ###
 
@@ -54,6 +54,7 @@ class CDataset(Dataset):
         rotimage = transform.rotate(image, rotDeg)
         homimage = transform.warp(image, transformsize.inverse)
         homimage = transform.warp(homimage, transformproj.inverse)
+        image = transform.resize(image, (256,344))
 
         image = np.expand_dims(image, axis=0)
         rotimage = np.expand_dims(rotimage, axis=0)
@@ -63,6 +64,10 @@ class CDataset(Dataset):
         rottarget = transform.rotate(target, rotDeg)
         homtarget = transform.warp(target, transformsize.inverse)
         homtarget = transform.warp(homtarget, transformproj.inverse)
+        
+        target = transform.resize(target, (256,344))
+        rottarget = transform.resize(rottarget, (256,344))
+        homtarget = transform.resize(homtarget, (256,344))
 
         target = np.expand_dims(target, axis=0)
         rottarget = np.expand_dims(rottarget, axis=0)
@@ -72,9 +77,9 @@ class CDataset(Dataset):
         bright1 = (((image / 255.0) ** (1.0 / 2.0)) * 255).astype(np.uint8)
         bright2 = (((image / 255.0) ** (1.0 / 2.5)) * 255).astype(np.uint8)
 
-        dark0 = (((image / 255.0) ** (1.0 / 0.8)) ** 255).astype(np.uint8)
-        dark1 = (((image / 255.0) ** (1.0 / 0.5)) ** 255).astype(np.uint8)
-        dark2 = (((image / 255.0) ** (1.0 / 0.2)) ** 255).astype(np.uint8)
+        dark0 = (((image / 255.0) ** (1.0 / 0.8)) * 255).astype(np.uint8)
+        dark1 = (((image / 255.0) ** (1.0 / 0.5)) * 255).astype(np.uint8)
+        dark2 = (((image / 255.0) ** (1.0 / 0.2)) * 255).astype(np.uint8)
 
         result = {'image': image, 'target': target,
                   'rotimage': rotimage, 'rottarget': rottarget,
