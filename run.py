@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           May. 31, 2021
-#       @Version        v0.11
+#       @Version        v0.12
 #
 ###
 
@@ -111,7 +111,8 @@ def featureMatching(oModel):
     for i in range(0, len(strQueryfileList)):
         for query in strQueryfileList[i]:
             for match in strMatchfileList[i]:
-                if(query >= match): continue
+                if(args.query == args.match): 
+                    if(query >= match): continue
                 oHeatmapQuery, oHeatmapMatch = oEvaluation.Match(query, match, width=args.width, height=args.height, ransac=args.ransac)
                 
                 # if(args.model == "eventpointnet" or args.model == "superpoint"):
@@ -134,11 +135,9 @@ def slam(oModel):
     vTrans = np.array([0, 0, 0])
     vRot = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
     vPoseDraw = [vTrans.tolist()]
-    for i in range(0,len(queryFiles) - 1):
+    for i in range(0,len(queryFiles) - 1, 1):
         log.DebugPrint().info(os.path.basename(queryFiles[i]) + " and " + os.path.basename(queryFiles[i + 1]))
-        imageQuery = cv2.imread(queryFiles[i])
-        
-        vRot, vTrans = oEvaluation.SLAM(queryFiles[i], queryFiles[i+1], vRot, vTrans, width=args.width, height=args.height, ransac=args.ransac)
+        vRot, vTrans = oEvaluation.SLAM(queryFiles[i], queryFiles[i + 1], vRot, vTrans, width=args.width, height=args.height, ransac=args.ransac)
         vPoseDraw.append(vTrans.tolist())
         
         if(i % 100 == 0):
@@ -155,34 +154,49 @@ def hpatches(oModel):
     uCount_i = 0
     uCount_v = 0
     fTotalMScore = 0
+    fTotalRepeat = 0
     f_iMScore = 0
     f_vMScore = 0
+    f_iRepeat = 0
+    f_vRepeat = 0
     fRecTime = 0
     vResult = dict()
+    vRepeatability = dict()
     for strHpatches in strHpatchesList:
         strHpatchesQueryList = readFolder(args.query + strHpatches + "/")
         query = args.query + strHpatches + "/1.ppm"
         fOneMScore = 0
+        fOneRepeat = 0
         # for query in strHpatchesQueryList:
         for match in strHpatchesQueryList:
             if(query >= match): continue
-            fMScore, _ = oEvaluation.HPatches(query, match, ransac=args.ransac)
+            fMScore, fRepeatability = oEvaluation.HPatches(query, match, ransac=args.ransac)
             uCountIdx += 1
             fTotalMScore += fMScore
+            fTotalRepeat += fRepeatability
             fOneMScore += fMScore
+            fOneRepeat += fRepeatability
             if(strHpatches[0] == 'i'):
                 uCount_i += 1
                 f_iMScore += fMScore
+                f_iRepeat += fRepeatability
             elif(strHpatches[0] == 'v'):
                 uCount_v += 1
                 f_vMScore += fMScore
+                f_vRepeat += fRepeatability
+        vRepeatability[strHpatches] = fOneRepeat / (len(strHpatchesQueryList) - 1)
         vResult[strHpatches] = fOneMScore / (len(strHpatchesQueryList) - 1)
         log.DebugPrint().info(vResult[strHpatches])
     np.save('./result/HPATCHES_' + str(args.model), vResult)
+    np.save('./result/HPATCHES_REPEAT_' + str(args.model), vRepeatability)
     log.DebugPrint().info("================= Result of " + str(args.model) + "=========================")
     log.DebugPrint().info("Matching Score Total: " + str(fTotalMScore / uCountIdx))
     log.DebugPrint().info("Matching Score Illumination: " + str(f_iMScore / uCount_i))
     log.DebugPrint().info("Matching Score Viewpoint: " + str(f_vMScore / uCount_v))
+    log.DebugPrint().info(" ******** ")
+    log.DebugPrint().info("Repeatability Total: " + str(fTotalRepeat / uCountIdx))
+    log.DebugPrint().info("Repeatability Illumination: " + str(f_iRepeat / uCount_i))
+    log.DebugPrint().info("Repeatability Viewpoint: " + str(f_vRepeat / uCount_v))
 
 if __name__ == "__main__":
     strModel = args.model

@@ -22,7 +22,7 @@ class CModel(CVisualLocalizationCore):
     def __init__(self):
         self.softmax = torch.nn.Softmax2d()
         self.__threshold = 3000
-        self.__bDescSift = False
+        self.__bDescSift = True
 
     def __del__(self):
         print("CEventPointNet Destructor!")
@@ -30,12 +30,14 @@ class CModel(CVisualLocalizationCore):
     def Open(self, bGPUFlag, argsmode):
         self.__gpuCheck = bGPUFlag
         self.__device = "cuda" if self.__gpuCheck else "cpu"
-        if(argsmode == 'query' or argsmode == 'match'):
+        if(argsmode == 'query' or argsmode == 'match' or argsmode == 'slam' or argsmode == 'hpatches'):
             self.__oQueryModel = nets.CEventPointNet().to(self.__device)
             if(self.__gpuCheck):
-                self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint.pth"))
+                self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint_detector.pth"))
+                DebugPrint().info("Using GPU..")
             else:
-                self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint.pth", map_location=torch.device("cpu")))
+                self.__oQueryModel.load_state_dict(torch.load("./EventPointNet/checkpoints/checkpoint_detector.pth", map_location=torch.device("cpu")))
+                DebugPrint().info("Using CPU..")
             if(self.__bDescSift == True):
                 DebugPrint().info("Descriptor: SIFT")
                 self.__oSift = cv2.SIFT_create()
@@ -57,15 +59,15 @@ class CModel(CVisualLocalizationCore):
     def Read(self):
         with torch.no_grad():
             self.__oQueryModel.eval()
-            kptDist, descDist = self.__oQueryModel.forward(self.__Image)
+            kptDist = self.__oQueryModel.forward(self.__Image)
             kptDist = self.softmax(kptDist)
             kptDist = torch.exp(kptDist)
             kptDist = torch.div(kptDist, (torch.sum(kptDist[0], axis=0)+.00001))
             kptDist = kptDist[:,:-1,:]
             kptDist = torch.nn.functional.pixel_shuffle(kptDist, 8)
             kptDist = kptDist.data.cpu().numpy()
-            descDist = descDist.data.cpu().numpy()
-            kpt, desc, heatmap = self.__GenerateLocalFeature(kptDist, descDist)
+            # descDist = descDist.data.cpu().numpy()
+            kpt, desc, heatmap = self.__GenerateLocalFeature(kptDist, None)
             return kpt, desc, heatmap
 
     def Setting(self, eCommand:int, Value=None):
@@ -89,7 +91,7 @@ class CModel(CVisualLocalizationCore):
         heatmap = np.squeeze(heatmap, axis=0)
         heatmap_aligned = heatmap.reshape(-1)
         heatmap_aligned = np.sort(heatmap_aligned)[::-1]
-        xs, ys = np.where(heatmap >= 0.015387)#heatmap_aligned[threshold])
+        xs, ys = np.where(heatmap >= 0.015387)#0.015396)#heatmap_aligned[threshold])
         vKpt = []
         vDesc = []
         H, W = heatmap.shape
@@ -97,7 +99,7 @@ class CModel(CVisualLocalizationCore):
         pts[0, :] = ys
         pts[1, :] = xs
         pts[2, :] = heatmap[xs, ys]
-        pts, _ = self.__Nms_fast(pts, H, W, 8)
+        pts, _ = self.__Nms_fast(pts, H, W, 9)
         ys = pts[0, :]
         xs = pts[1, :]
         if(len(self.__ImageOriginal.shape) >= 3):
@@ -106,7 +108,7 @@ class CModel(CVisualLocalizationCore):
         targetImg = self.__Image
         targetImg = torch.squeeze(torch.squeeze(targetImg, axis=0), axis=0)
         uHeight, uWidth = targetImg.shape
-        uOffset = 7
+        uOffset = 5
         for kptNo in range(len(xs)):
             if(xs[kptNo] > uHeight - uOffset or xs[kptNo] < uOffset or ys[kptNo] > uWidth - uOffset or ys[kptNo] < uOffset): continue
             if(not self.__bDescSift):

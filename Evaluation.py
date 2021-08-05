@@ -5,13 +5,13 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           Jun. 24, 2021
-#       @Version        v0.4
+#       @Version        v0.5
 #
 ###
 
 import numpy as np
 from common.Log import DebugPrint
-from skimage import io, color
+from skimage import io, color, img_as_ubyte
 from skimage.transform import resize
 from lcore.hal import eSettingCmd
 import os, cv2
@@ -31,7 +31,8 @@ class CEvaluateLocalFeature():
         
         oImageGray = (color.rgb2gray(oImage) * 255).astype(np.uint8)
         oImageGray = np.expand_dims(np.asarray(oImageGray), axis=0)
-        oImage = np.expand_dims((np.asarray(oImage) * 255).astype(np.uint8), axis=0)
+        oImage = np.expand_dims(img_as_ubyte(oImage), axis=0)
+        # oImage = np.expand_dims((np.asarray(oImage) * 255).astype(np.uint8), axis=0)
         return oImage, oImageGray
 
     def Query(self, image_path, width = None, height = None):
@@ -46,7 +47,7 @@ class CEvaluateLocalFeature():
         fSaveTime = time.time() - ckTime
         DebugPrint().info("Running Time: " + str(fSaveTime))
         DebugPrint().info("Keypoint number: " + str(len(vKpt)))
-        oQuery = dict(image = oImageGray, keypoint = vKpt, descriptor = vDesc)
+        oQuery = dict(image = oImageGray, keypoint = vKpt, descriptor = vDesc, colorimage = oImage)
         oKptHandler = CKeypointHandler("query", oQuery)
         vResultPath = image_path.split(os.path.sep)
         strResultPath = "./result/" + vResultPath[-3] + "/" + vResultPath[-2] + "/"
@@ -71,7 +72,7 @@ class CEvaluateLocalFeature():
         vQueryKpt, vQueryDesc, oQueryHeatmap = self.__oModel.Read()
         DebugPrint().info("Running Time: " + str(time.time() - ckTime))
         DebugPrint().info("Query Keypt Number: " + str(len(vQueryKpt)))
-        oQuery = dict(image = oQueryGray, keypoint=vQueryKpt, descriptor=vQueryDesc)
+        oQuery = dict(image = oQueryGray, keypoint=vQueryKpt, descriptor=vQueryDesc, colorimage = oQuery)
         self.__oModel.Reset()
 
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oMatchGray)
@@ -80,7 +81,7 @@ class CEvaluateLocalFeature():
         vMatchKpt, vMatchDesc, oMatchHeatmap = self.__oModel.Read()
         DebugPrint().info("Running Time: " + str(time.time() - ckTime))
         DebugPrint().info("Match Keypt Number: " + str(len(vMatchKpt)))
-        oMatch = dict(image = oMatchGray, keypoint=vMatchKpt, descriptor=vMatchDesc)
+        oMatch = dict(image = oMatchGray, keypoint=vMatchKpt, descriptor=vMatchDesc, colorimage = oMatch)
         self.__oModel.Reset()
         
         oKptMatcher = CKeypointHandler("match", oQuery, oMatch)
@@ -115,6 +116,7 @@ class CEvaluateLocalFeature():
         oQuery = dict(image = oQueryGray, keypoint=vQueryKpt, descriptor=vQueryDesc)
         self.__oModel.Reset()
         oMatchGray = (((oMatchGray / 255.0) ** (1.0 / 0.2)) * 255).astype(np.uint8)
+        oMatch = (((oMatch / 255.0) ** (1.0 / 0.2)) * 255).astype(np.uint8)
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oMatchGray)
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oMatch)
         ckTime = time.time()
@@ -133,6 +135,8 @@ class CEvaluateLocalFeature():
   
         E, mask = cv2.findEssentialMat(vQueryKpt, vMatchKpt, focal=718.8560, pp=(607.1928, 185.2157), prob=0.999)
         _, R, T, mask = cv2.recoverPose(E, vQueryKpt, vMatchKpt, focal=718.8560, pp=(607.1928, 185.2157))
+        # E, mask = cv2.findEssentialMat(vQueryKpt, vMatchKpt, focal=707.0912, pp=(601.8873, 183.1104), prob=0.999)
+        # _, R, T, mask = cv2.recoverPose(E, vQueryKpt, vMatchKpt, focal=707.0912, pp=(601.8873, 183.1104))
 
         return prevR.dot(R), prevT + prevR.dot(T[:,0])
         
@@ -142,6 +146,13 @@ class CEvaluateLocalFeature():
             return False
         oQuery, oQueryGray = self.__ReadImage(query_path, None, None)
         oMatch, oMatchGray = self.__ReadImage(match_path, None, None)
+        HomographyPath = os.path.dirname(query_path) + "/H_1_" + os.path.basename(match_path)[0]
+        HomographyFile = open(HomographyPath, 'r')
+        HomographyRead = HomographyFile.read()
+        HomographyRead = HomographyRead.split()
+        mHomography = np.array([[float(HomographyRead[0]), float(HomographyRead[1]), float(HomographyRead[2])],
+                                [float(HomographyRead[3]), float(HomographyRead[4]), float(HomographyRead[5])],
+                                [float(HomographyRead[6]), float(HomographyRead[7]), float(HomographyRead[8])]])
 
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oQueryGray)
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oQuery)
@@ -152,7 +163,7 @@ class CEvaluateLocalFeature():
         DebugPrint().info("Query Keypt Number: " + str(len(vQueryKpt)))
         oQuery = dict(image = oQueryGray, keypoint=vQueryKpt, descriptor=vQueryDesc)
         self.__oModel.Reset()
-
+        
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oMatchGray)
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oMatch)
         ckTime = time.time()
@@ -162,16 +173,36 @@ class CEvaluateLocalFeature():
         oMatch = dict(image = oMatchGray, keypoint=vMatchKpt, descriptor=vMatchDesc)
         self.__oModel.Reset()
         
+        uRepeatabilityCk = 0
+        for i in range(0, len(vQueryKpt)):
+            vKpt = np.array([vQueryKpt[i].pt[0], vQueryKpt[i].pt[1], 1])
+            vCheckKpt = mHomography.dot(vKpt)
+            for j in range(0, len(vMatchKpt)):
+                vKpt2 = np.array([vMatchKpt[j].pt[0], vMatchKpt[j].pt[1], 1])
+                if(np.linalg.norm(vCheckKpt - vKpt2) <= 4): uRepeatabilityCk += 1
+        
+        fRepeatability = uRepeatabilityCk / min(len(vQueryKpt), len(vMatchKpt))
+
         oKptMatcher = CKeypointHandler("match", oQuery, oMatch)
         oKptMatcher.Matching("bruteforce", self.__strModel, ransac=ransac)
         uMatchingNum = oKptMatcher.GetMatchingNumber()
-        fMScore = (uMatchingNum / len(vQueryKpt) + uMatchingNum / len(vMatchKpt)) / 2
+        
+        vMatches = oKptMatcher.Read()
+        uCorrectMatches = 0
+        for m in vMatches:
+            vKpt = np.array([vQueryKpt[m.queryIdx].pt[0], vQueryKpt[m.queryIdx].pt[1], 1])
+            vCheckKpt = mHomography.dot(vKpt)
+            vKpt2 = np.array([vMatchKpt[m.trainIdx].pt[0], vMatchKpt[m.trainIdx].pt[1], 1])
+            if(np.linalg.norm(vKpt2 - vKpt) <= 4): uCorrectMatches += 1
+            
+        fMScore = uCorrectMatches / len(vMatches)
+        # fMScore = (uMatchingNum / len(vQueryKpt) + uMatchingNum / len(vMatchKpt)) / 2
         
         # strQueryName = os.path.splitext(os.path.basename(query_path))[0]
         # strMatchName = os.path.basename(match_path)
         # oKptMatcher.Save("./result/MatchedResult_" + str(self.__strModel) + str(strQueryName) + "_" + str(strMatchName))
         
-        return fMScore, fRecTime
+        return fMScore, fRepeatability
 
 class CKeypointHandler():
     def __init__(self, mode, query, match=None):
@@ -222,9 +253,9 @@ class CKeypointHandler():
             if(len(self.__vMatches) == 0):
                 log.DebugPrint().info("No matching points")
                 return False
-            oImgResult = cv2.drawMatches(np.squeeze(self.__oQuery['image'], axis=0), 
+            oImgResult = cv2.drawMatches(cv2.cvtColor(np.squeeze(self.__oQuery['colorimage'], axis=0), cv2.COLOR_RGB2BGR), 
                                         self.__oQuery['keypoint'], 
-                                        np.squeeze(self.__oMatch['image'], axis=0), 
+                                        cv2.cvtColor(np.squeeze(self.__oMatch['colorimage'], axis=0), cv2.COLOR_RGB2BGR), 
                                         self.__oMatch['keypoint'], 
                                         self.__vMatches, 
                                         None, 
@@ -237,7 +268,7 @@ class CKeypointHandler():
                 DebugPrint().info("No matching points")
                 return False
 
-            oImgResult = cv2.drawKeypoints(np.squeeze(self.__oQuery['image'], axis=0),
+            oImgResult = cv2.drawKeypoints(cv2.cvtColor(np.squeeze(self.__oQuery['colorimage'], axis=0), cv2.COLOR_RGB2BGR),
                                           self.__oQuery['keypoint'],
                                           None,
                                           color=(0, 255, 0, 0))
