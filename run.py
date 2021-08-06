@@ -22,6 +22,7 @@ import numpy as np
 import time
 from Evaluation import *
 import draw
+from DBhandler.kitti import CKitti
 
 parser = argparse.ArgumentParser(description='Test Local Feature')
 parser.add_argument('--model', '-m', type=str, default='eventpointnet', dest='model',
@@ -135,13 +136,35 @@ def slam(oModel):
     vTrans = np.array([0, 0, 0])
     vRot = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
     vPoseDraw = [vTrans.tolist()]
+    oKitti = CKitti(vResultPath[-3])
+    vGTPose = oKitti.getPose()
+    vCalib = oKitti.getCalib()
+    vRPE = []
+    vATE = []
     for i in range(0,len(queryFiles) - 1, 1):
         log.DebugPrint().info(os.path.basename(queryFiles[i]) + " and " + os.path.basename(queryFiles[i + 1]))
-        vRot, vTrans = oEvaluation.SLAM(queryFiles[i], queryFiles[i + 1], vRot, vTrans, width=args.width, height=args.height, ransac=args.ransac)
+        vPrevRot = vRot
+        vPrevTrans = vTrans
+        vRot, vTrans = oEvaluation.SLAM(queryFiles[i], queryFiles[i + 1], vRot, vTrans, vCalib, width=args.width, height=args.height, ransac=args.ransac)
+        
+        vPrevEstm = np.hstack((vPrevRot, np.expand_dims(vPrevTrans, axis=1)))
+        vPrevEstm = np.vstack((vPrevEstm, [0, 0, 0, 1]))
+        vEstm = np.hstack((vRot, np.expand_dims(vTrans, axis=1)))
+        vEstm = np.vstack((vEstm, [0, 0, 0, 1]))
+        
+        mRPE = np.linalg.inv(np.linalg.inv(vGTPose[i]).dot(vGTPose[i+1])).dot(np.linalg.inv(vPrevEstm).dot(vEstm))
+        mATE = np.linalg.inv(vGTPose[i+1]).dot(vEstm)
+        vRPE.append(mRPE[:, 3])
+        vATE.append(mATE[:, 3])
         vPoseDraw.append(vTrans.tolist())
         
         if(i % 100 == 0):
             oDraw.draw2D(vPoseDraw)
+    RPE = np.sqrt(np.sum(np.linalg.norm(vRPE, axis=1)**2) / len(vRPE))
+    ATE = np.sqrt(np.sum(np.linalg.norm(vATE, axis=1)**2) / len(vATE))
+
+    log.DebugPrint().info("RPE: " + str(RPE))
+    log.DebugPrint().info("ATE: " + str(ATE))
     oDraw.draw2D(vPoseDraw)
 
 def hpatches(oModel):

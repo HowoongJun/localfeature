@@ -99,7 +99,7 @@ class CEvaluateLocalFeature():
         
         return oQueryHeatmap, oMatchHeatmap
 
-    def SLAM(self, query_path, match_path, prevR, prevT, width=None, height=None, ransac = 1.0):
+    def SLAM(self, query_path, match_path, prevR, prevT, calibration, width=None, height=None, ransac = 1.0):
         if(self.__oModel == None):
             DebugPrint().error("Model is None")
             return False
@@ -132,11 +132,9 @@ class CEvaluateLocalFeature():
 
         vQueryKpt = np.int32([vQueryKpt[m.queryIdx].pt for m in vMatches])
         vMatchKpt = np.int32([vMatchKpt[m.trainIdx].pt for m in vMatches])
-  
-        E, mask = cv2.findEssentialMat(vQueryKpt, vMatchKpt, focal=718.8560, pp=(607.1928, 185.2157), prob=0.999)
-        _, R, T, mask = cv2.recoverPose(E, vQueryKpt, vMatchKpt, focal=718.8560, pp=(607.1928, 185.2157))
-        # E, mask = cv2.findEssentialMat(vQueryKpt, vMatchKpt, focal=707.0912, pp=(601.8873, 183.1104), prob=0.999)
-        # _, R, T, mask = cv2.recoverPose(E, vQueryKpt, vMatchKpt, focal=707.0912, pp=(601.8873, 183.1104))
+
+        E, mask = cv2.findEssentialMat(vQueryKpt, vMatchKpt, focal=float(calibration['P0'][0]), pp=(float(calibration['P0'][2]), float(calibration['P0'][6])), prob=0.999)
+        _, R, T, mask = cv2.recoverPose(E, vQueryKpt, vMatchKpt, focal=float(calibration['P0'][0]), pp=(float(calibration['P0'][2]), float(calibration['P0'][6])))
 
         return prevR.dot(R), prevT + prevR.dot(T[:,0])
         
