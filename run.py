@@ -5,7 +5,7 @@
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
 #       @Date           May. 31, 2021
-#       @Version        v0.12
+#       @Version        v0.13
 #
 ###
 
@@ -82,8 +82,8 @@ def queryCheck(oModel):
         vKpt, vDesc, oHeatmap, fTime = oEvaluation.Query(fileIdx, args.width, args.height)
         uCount += 1
         fTotalTime += fTime
-        # if(args.model == "eventpointnet" or args.model == "superpoint"):
-        #     cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmap)
+        if(args.model == "eventpointnet" or args.model == "superpoint"):
+            cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmap)
     log.DebugPrint().info("========= Result of " + str(args.model) + "==========")
     log.DebugPrint().info("Total Time: " + str(fTotalTime))
     log.DebugPrint().info("Average Time: " + str(fTotalTime / uCount))
@@ -145,8 +145,10 @@ def slam(oModel):
         log.DebugPrint().info(os.path.basename(queryFiles[i]) + " and " + os.path.basename(queryFiles[i + 1]))
         vPrevRot = vRot
         vPrevTrans = vTrans
-        vRot, vTrans = oEvaluation.SLAM(queryFiles[i], queryFiles[i + 1], vRot, vTrans, vCalib, width=args.width, height=args.height, ransac=args.ransac)
-        
+
+        fGTScale = np.linalg.norm(vGTPose[i][:,3] - vGTPose[i+1][:, 3])
+        vRot, vTrans = oEvaluation.SLAM(queryFiles[i], queryFiles[i + 1], vRot, vTrans, vCalib, scale = fGTScale, width=args.width, height=args.height, ransac=args.ransac)
+        vTrans[1] = 0
         vPrevEstm = np.hstack((vPrevRot, np.expand_dims(vPrevTrans, axis=1)))
         vPrevEstm = np.vstack((vPrevEstm, [0, 0, 0, 1]))
         vEstm = np.hstack((vRot, np.expand_dims(vTrans, axis=1)))
@@ -193,7 +195,7 @@ def hpatches(oModel):
         # for query in strHpatchesQueryList:
         for match in strHpatchesQueryList:
             if(query >= match): continue
-            fMScore, fRepeatability = oEvaluation.HPatches(query, match, ransac=args.ransac)
+            fMScore, fRepeatability = oEvaluation.HPatches(query, match, width=args.width, height=args.height, threshold=args.threshold, ransac=args.ransac)
             uCountIdx += 1
             fTotalMScore += fMScore
             fTotalRepeat += fRepeatability
@@ -254,6 +256,7 @@ if __name__ == "__main__":
         slam(model)
     elif(args.mode == "hpatches"):
         log.DebugPrint().info("[Local] Hpatches Evaluation Mode")
+        model.Setting(eSettingCmd.eSettingCmd_THRESHOLD, args.threshold)
         hpatches(model)
     else:
         log.DebugPrint().error("[Local] Wrong mode! Please check the mode again")
