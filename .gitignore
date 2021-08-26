@@ -4,4 +4,7 @@ log
 *.png
 *.jpg
 *.JPG
+*.ppm
+*.npz
 runs
+*.npy
