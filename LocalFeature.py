@@ -24,37 +24,37 @@ class CVisualLocLocal(CVisualLocalizationCore):
 
         if model == "superpoint":
             log.DebugPrint().info("Model: SuperPoint")
-            self.__module = imp.load_source(model, "./localfeature_ref/superpoint/superpoint.py")
+            self.__module = imp.load_source(model, "./model/superpoint/superpoint.py")
         elif model == "eventpointnet":
             log.DebugPrint().info("Model: EventPointNet")
-            self.__module = imp.load_source(model, "./EventPointNet/eventpointnet.py")
+            self.__module = imp.load_source(model, "./model/EventPointNet/eventpointnet.py")
         elif model == "orb":
             log.DebugPrint().info("Model: ORB")
-            self.__module = imp.load_source(model, "./localfeature_ref/orb/orb.py")
+            self.__module = imp.load_source(model, "./model/orb/orb.py")
         elif model == "sift":
             log.DebugPrint().info("Model: SIFT")
-            self.__module = imp.load_source(model, "./localfeature_ref/sift/sift.py")
+            self.__module = imp.load_source(model, "./model/sift/sift.py")
         elif model == "r2d2":
             log.DebugPrint().info("Model: R2D2")
-            self.__module = imp.load_source(model, "./localfeature_ref/r2d2/r2d2.py")
+            self.__module = imp.load_source(model, "./model/r2d2/r2d2.py")
         elif model == "keynet":
             log.DebugPrint().info("Model: Key.Net")
-            self.__module = imp.load_source(model, "./localfeature_ref/keynet/keynet.py")
+            self.__module = imp.load_source(model, "./model/keynet/keynet.py")
         elif model == "lift":
             log.DebugPrint().info("Model: LIFT")
-            self.__module = imp.load_source(model, "./localfeature_ref/lift/lift.py")
+            self.__module = imp.load_source(model, "./model/lift/lift.py")
         elif model == "akaze":
             log.DebugPrint().info("Model: AKAZE")
-            self.__module = imp.load_source(model, "./localfeature_ref/akaze/akaze.py")
+            self.__module = imp.load_source(model, "./model/akaze/akaze.py")
         elif model == "kaze":
             log.DebugPrint().info("Model: KAZE")
-            self.__module = imp.load_source(model, "./localfeature_ref/kaze/kaze.py")
+            self.__module = imp.load_source(model, "./model/kaze/kaze.py")
         elif model == "brisk":
             log.DebugPrint().info("Model: BRISK")
-            self.__module = imp.load_source(model, "./localfeature_ref/brisk/brisk.py")
+            self.__module = imp.load_source(model, "./model/brisk/brisk.py")
         elif model == "lfnet":
             log.DebugPrint().info("Model: LF-Net")
-            self.__module = imp.load_source(model, "./localfeature_ref/lfnet/lfnet.py")
+            self.__module = imp.load_source(model, "./model/lfnet/lfnet.py")
 
     def __del__(self):
         self.Close()
