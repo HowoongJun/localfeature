@@ -1,5 +1,5 @@
-# EventPointNet: Supervised keypoint detector with neuromorphic camera data
-This repository provides python implementation of supervised keypoint detector with neuromorphic camera data, known as EventPointNet. 
+# Local feature evaluation framework
+This repository provides a framework for local feature evaluation
 
 ## How to run
 Argument for the method is as follows
@@ -36,17 +36,5 @@ numpy 1.19.2
 ```
 
 Aside from above dependencies, docker container for this repository is provided [here](https://hub.docker.com/r/howoongjun/eventpointnet)
-
-
-## Training
-
-Pre-trained model for the method is provided here (`EventPointNet/checkpoints/checkpoint.pth`)
-The model was trained with [Multi Vehicle Stereo Event Camera(MVSEC) dataset](https://daniilidis-group.github.io/mvsec/). 
-Left camera of the three datasets(day1, day2, and night) were used for training.
-
-## Reference
-
-Reference code is implemented in submodule [localfeature_ref](https://github.com/HowoongJun/localfeature_ref.git).
-Details are explained in the submodule repository.
 
 ## Evaluation
