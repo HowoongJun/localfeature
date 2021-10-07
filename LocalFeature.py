@@ -28,6 +28,9 @@ class CVisualLocLocal(CVisualLocalizationCore):
         elif model == "eventpointnet":
             log.DebugPrint().info("Model: EventPointNet")
             self.__module = imp.load_source(model, "./model/EventPointNet/eventpointnet.py")
+        elif model == "eventpointnetpp":
+            log.DebugPrint().info("Model: EventPointNet++")
+            self.__module = imp.load_source(model, "./model/EventPointNetpp/eventpointnetpp.py")
         elif model == "orb":
             log.DebugPrint().info("Model: ORB")
             self.__module = imp.load_source(model, "./model/orb/orb.py")

@@ -78,8 +78,7 @@ class CEvaluateLocalFeature():
         DebugPrint().info("Query Keypt Number: " + str(len(vQueryKpt)))
         oQuery = dict(image = oQueryGray, keypoint=vQueryKpt, descriptor=vQueryDesc, colorimage = oQuery)
         self.__oModel.Reset()
-        # oMatchGray = (((oMatchGray / 255.0) ** (1.0 / 0.1)) * 255).astype(np.uint8)
-        # oMatch = (((oMatch / 255.0) ** (1.0 / 0.1)) * 255).astype(np.uint8)
+        
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oMatchGray)
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oMatch)
         ckTime = time.time()
@@ -101,8 +100,9 @@ class CEvaluateLocalFeature():
         strQueryName = os.path.splitext(os.path.basename(query_path))[0]
         # strMatchName = os.path.basename(match_path)
         oKptMatcher.Save(strResultPath + "/MatchedResult_" + str(strQueryName) + "_" + str(vMatchName[0]) + "_" + self.__strModel + str(vMatchName[1]))
+        cv2.imwrite(strResultPath + "/Heatmap_" + self.__strModel + "_" + str(strQueryName) + ".png", oQueryHeatmap)
+        cv2.imwrite(strResultPath + "/Heatmap_" + self.__strModel + "_" + str(vMatchName[0]) + ".png", oMatchHeatmap)
         
-        return oQueryHeatmap, oMatchHeatmap
 
     def SLAM(self, query_path, match_path, prevR, prevT, calibration, scale = 0, width=None, height=None, ransac = 1.0):
         if(self.__oModel == None):
@@ -120,8 +120,8 @@ class CEvaluateLocalFeature():
         DebugPrint().info("Query Keypt Number: " + str(len(vQueryKpt)))
         oQuery = dict(image = oQueryGray, keypoint=vQueryKpt, descriptor=vQueryDesc)
         self.__oModel.Reset()
-        oMatchGray = (((oMatchGray / 255.0) ** (1.0 / 0.2)) * 255).astype(np.uint8)
-        oMatch = (((oMatch / 255.0) ** (1.0 / 0.2)) * 255).astype(np.uint8)
+        # oMatchGray = (((oMatchGray / 255.0) ** (1.0 / 0.2)) * 255).astype(np.uint8)
+        # oMatch = (((oMatch / 255.0) ** (1.0 / 0.2)) * 255).astype(np.uint8)
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA_GRAY, oMatchGray)
         self.__oModel.Setting(eSettingCmd.eSettingCmd_IMAGE_DATA, oMatch)
         ckTime = time.time()
@@ -291,7 +291,7 @@ class CKeypointHandler():
         oImgResult = None
         if(self.__mode == "match"):
             if(len(self.__vMatches) == 0):
-                log.DebugPrint().info("No matching points")
+                DebugPrint().info("No matching points")
                 return False
             # saveMatches = []
             # for a in range(0, len(self.__vMatches)):
@@ -301,8 +301,8 @@ class CKeypointHandler():
                                         self.__oQuery['keypoint'], 
                                         cv2.cvtColor(np.squeeze(self.__oMatch['colorimage'], axis=0), cv2.COLOR_RGB2BGR), 
                                         self.__oMatch['keypoint'], 
-                                        # self.__vMatches, 
-                                        saveMatches,
+                                        self.__vMatches, 
+                                        # saveMatches,
                                         None, 
                                         matchColor=(0, 255, 0, 0),
                                         singlePointColor=(0, 0, 255, 0),
