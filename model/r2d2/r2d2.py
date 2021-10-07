@@ -1,7 +1,7 @@
 from common.Log import DebugPrint
 from lcore.hal import *
 import numpy as np
-import localfeature_ref.r2d2.extract as extract
+import model.r2d2.extract as extract
 from PIL import Image
 import cv2
 
@@ -23,7 +23,7 @@ class CModel(CVisualLocalizationCore):
         print("Write")
 
     def Read(self):
-        kpt, vDesc, vScores = extract.extract_keypoints(self.__gpuCheck, "./localfeature_ref/r2d2/checkpoints/r2d2_WAF_N16.pt", self.__Image, threshold=self.__threshold)
+        kpt, vDesc, vScores = extract.extract_keypoints(self.__gpuCheck, "./model/r2d2/checkpoints/r2d2_WAF_N16.pt", self.__Image, 3000)#threshold=self.__threshold)
         vKpt = []
   
         for kptNo in range(len(kpt)):

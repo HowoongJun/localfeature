@@ -9,7 +9,7 @@ import glob
 import cv2
 import tensorflow as tf
 
-from localfeature_ref.lfnet.spatial_transformer import inplane_inverse_warp
+from model.lfnet.spatial_transformer import inplane_inverse_warp
 
 def inverse_warp_view_2_to_1(heatmaps2, depths2, depths1, c2Tc1s, K1, K2, inv_thetas1, thetas2, depth_thresh=0.5, get_warped_depth=False):
     # compute warping xy coordinate from view1 to view2

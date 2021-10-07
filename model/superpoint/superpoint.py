@@ -1,7 +1,7 @@
 import torch, cv2
 from common.Log import DebugPrint
 from lcore.hal import *
-from localfeature_ref.superpoint.superpointfrontend import SuperPointFrontend
+from model.superpoint.superpointfrontend import SuperPointFrontend
 import numpy as np
 
 class CModel(CVisualLocalizationCore):
@@ -15,7 +15,7 @@ class CModel(CVisualLocalizationCore):
 
     def Open(self, gpu_flag, args_mode):
         self.__device = "cuda" if gpu_flag else "cpu"
-        self.__oSPPFrontend = SuperPointFrontend(weights_path="./localfeature_ref/superpoint/checkpoints/checkpoint.pth",
+        self.__oSPPFrontend = SuperPointFrontend(weights_path="./model/superpoint/checkpoints/checkpoint.pth",
                                 nms_dist=self.__uNmsDist,
                                 conf_thresh=self.__fConfThresh,
                                 nn_thresh=self.__fNnThresh,

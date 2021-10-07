@@ -10,15 +10,15 @@ import cv2
 from tqdm import tqdm
 import pickle
 
-from localfeature_ref.lfnet.mydatasets import *
+from model.lfnet.mydatasets import *
 
-from localfeature_ref.lfnet.det_tools import *
-from localfeature_ref.lfnet.eval_tools import draw_keypoints
-from localfeature_ref.lfnet.common.tf_train_utils import get_optimizer
+from model.lfnet.det_tools import *
+from model.lfnet.eval_tools import draw_keypoints
+from model.lfnet.common.tf_train_utils import get_optimizer
 
-from localfeature_ref.lfnet.inference import *
-from localfeature_ref.lfnet.utils import embed_breakpoint, print_opt
-from localfeature_ref.lfnet.common.argparse_utils import *
+from model.lfnet.inference import *
+from model.lfnet.utils import embed_breakpoint, print_opt
+from model.lfnet.common.argparse_utils import *
 
 
 MODEL_PATH = './localfeature_ref/lfnet/models'

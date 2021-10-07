@@ -114,13 +114,7 @@ def featureMatching(oModel):
             for match in strMatchfileList[i]:
                 if(args.query == args.match): 
                     if(query >= match): continue
-                oHeatmapQuery, oHeatmapMatch = oEvaluation.Match(query, match, width=args.width, height=args.height, ransac=args.ransac)
-                
-                # if(args.model == "eventpointnet" or args.model == "superpoint"):
-                #     if(oHeatmapQuery is not None):
-                #         cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(query)), oHeatmapQuery)
-                #     if(oHeatmapMatch is not None):
-                #         cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(match)), oHeatmapMatch)
+                oEvaluation.Match(query, match, width=args.width, height=args.height, ransac=args.ransac)
 
 def slam(oModel):
     if(args.query == None):
@@ -141,13 +135,15 @@ def slam(oModel):
     vCalib = oKitti.getCalib()
     vRPE = []
     vATE = []
-    for i in range(0,len(queryFiles) - 1, 1):
-        log.DebugPrint().info(os.path.basename(queryFiles[i]) + " and " + os.path.basename(queryFiles[i + 1]))
+    uStep = 1
+    fInitTime = time.time()
+    for i in range(0,len(queryFiles) - 1, uStep):
+        log.DebugPrint().info(os.path.basename(queryFiles[i]) + " and " + os.path.basename(queryFiles[i + uStep]))
         vPrevRot = vRot
         vPrevTrans = vTrans
 
         fGTScale = np.linalg.norm(vGTPose[i][:,3] - vGTPose[i+1][:, 3])
-        vRot, vTrans = oEvaluation.SLAM(queryFiles[i], queryFiles[i + 1], vRot, vTrans, vCalib, scale = fGTScale, width=args.width, height=args.height, ransac=args.ransac)
+        vRot, vTrans = oEvaluation.SLAM(queryFiles[i], queryFiles[i + uStep], vRot, vTrans, vCalib, scale = fGTScale, width=args.width, height=args.height, ransac=args.ransac)
         vTrans[1] = 0
         vPrevEstm = np.hstack((vPrevRot, np.expand_dims(vPrevTrans, axis=1)))
         vPrevEstm = np.vstack((vPrevEstm, [0, 0, 0, 1]))
@@ -162,6 +158,8 @@ def slam(oModel):
         
         if(i % 100 == 0):
             oDraw.draw2D(vPoseDraw)
+    log.DebugPrint().info("Total Time: " + str(time.time() - fInitTime))
+    log.DebugPrint().info("Average Time: " + str((time.time() - fInitTime)/len(queryFiles)))
     RPE = np.sqrt(np.sum(np.linalg.norm(vRPE, axis=1)**2) / len(vRPE))
     ATE = np.sqrt(np.sum(np.linalg.norm(vATE, axis=1)**2) / len(vATE))
 

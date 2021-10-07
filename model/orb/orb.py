@@ -6,6 +6,7 @@ import cv2
 class CModel(CVisualLocalizationCore):
     def __init__(self):
         print("ORB Constructor")
+        self.__threshold = 3000
     
     def __del__(self):
         print("Close")

@@ -1,18 +1,18 @@
 ###
 #
-#       @Brief          eventpointnet.py
-#       @Details        EventPointNet model main class
+#       @Brief          eventpointnetpp.py
+#       @Details        EventPointNet++ model main class
 #       @Org            Robot Learning Lab(https://rllab.snu.ac.kr), Seoul National University
 #       @Author         Howoong Jun (howoong.jun@rllab.snu.ac.kr)
-#       @Date           Mar. 18, 2021
-#       @Version        v0.20
+#       @Date           Sep. 02, 2021
+#       @Version        v0.1
 #
 ###
 
 
 from lcore.hal import *
-import model.EventPointNet.train as train
-import model.EventPointNet.nets as nets
+# import EventPointNet.train as train
+import model.EventPointNetpp.nets as nets
 import numpy as np
 import torch, cv2
 from common.Log import DebugPrint
@@ -22,7 +22,7 @@ class CModel(CVisualLocalizationCore):
     def __init__(self):
         self.softmax = torch.nn.Softmax2d()
         self.__threshold = 3000
-        self.__bDescSift = True
+        self.__bDescSift = False
 
     def __del__(self):
         print("CEventPointNet Destructor!")
@@ -31,12 +31,12 @@ class CModel(CVisualLocalizationCore):
         self.__gpuCheck = bGPUFlag
         self.__device = "cuda" if self.__gpuCheck else "cpu"
         if(argsmode == 'query' or argsmode == 'match' or argsmode == 'slam' or argsmode == 'hpatches'):
-            self.__oQueryModel = nets.CEventPointNet().to(self.__device)
+            self.__oQueryModel = nets.CEventPointNetPP().to(self.__device)
             if(self.__gpuCheck):
-                self.__oQueryModel.load_state_dict(torch.load("./model/EventPointNet/checkpoints/checkpoint_detector.pth"))
+                self.__oQueryModel.load_state_dict(torch.load("/root/Workspace/eventpointnetpp/EventPointNetPP/checkpoints/checkpoint.pth"))
                 DebugPrint().info("Using GPU..")
             else:
-                self.__oQueryModel.load_state_dict(torch.load("./model/EventPointNet/checkpoints/checkpoint_detector.pth", map_location=torch.device("cpu")))
+                self.__oQueryModel.load_state_dict(torch.load("./model/EventPointNetpp/checkpoints/checkpoint.pth", map_location=torch.device("cpu")))
                 DebugPrint().info("Using CPU..")
             if(self.__bDescSift == True):
                 DebugPrint().info("Descriptor: SIFT")
@@ -59,15 +59,15 @@ class CModel(CVisualLocalizationCore):
     def Read(self):
         with torch.no_grad():
             self.__oQueryModel.eval()
-            kptDist = self.__oQueryModel.forward(self.__Image)
+            kptDist, descDist = self.__oQueryModel.forward(self.__Image)
             kptDist = self.softmax(kptDist)
             kptDist = torch.exp(kptDist)
             kptDist = torch.div(kptDist, (torch.sum(kptDist[0], axis=0)+.00001))
             kptDist = kptDist[:,:-1,:]
             kptDist = torch.nn.functional.pixel_shuffle(kptDist, 8)
             kptDist = kptDist.data.cpu().numpy()
-            # descDist = descDist.data.cpu().numpy()
-            kpt, desc, heatmap = self.__GenerateLocalFeature(kptDist, None)
+            descDist = descDist.data.cpu().numpy()
+            kpt, desc, heatmap = self.__GenerateLocalFeature(kptDist, descDist)
             return kpt, desc, heatmap
 
     def Setting(self, eCommand:int, Value=None):
@@ -91,7 +91,8 @@ class CModel(CVisualLocalizationCore):
         heatmap = np.squeeze(heatmap, axis=0)
         heatmap_aligned = heatmap.reshape(-1)
         heatmap_aligned = np.sort(heatmap_aligned)[::-1]
-        xs, ys = np.where(heatmap >= 0.015387)#0.015396)#heatmap_aligned[threshold])
+        xs, ys = np.where(heatmap >= heatmap_aligned[1000])#0.015387)#0.015396)#heatmap_aligned[1000])
+        # print(heatmap_aligned[2000])
         vKpt = []
         vDesc = []
         H, W = heatmap.shape
@@ -99,24 +100,18 @@ class CModel(CVisualLocalizationCore):
         pts[0, :] = ys
         pts[1, :] = xs
         pts[2, :] = heatmap[xs, ys]
-        pts, _ = self.__Nms_fast(pts, H, W, 9)
+        pts, _ = self.__Nms_fast(pts, H, W, 7)
         ys = pts[0, :]
         xs = pts[1, :]
-        if(len(self.__ImageOriginal.shape) >= 3):
-            self.__ImageOriginal = np.squeeze(self.__ImageOriginal, axis=0)
-        
-        targetImg = self.__Image
-        targetImg = torch.squeeze(torch.squeeze(targetImg, axis=0), axis=0)
-        uHeight, uWidth = targetImg.shape
-        uOffset = 5
+        uOffset = 8
+
         for kptNo in range(len(xs)):
-            if(xs[kptNo] > uHeight - uOffset or xs[kptNo] < uOffset or ys[kptNo] > uWidth - uOffset or ys[kptNo] < uOffset): continue
+            if(xs[kptNo] > H - uOffset or xs[kptNo] < uOffset or ys[kptNo] > W - uOffset or ys[kptNo] < uOffset): continue
             if(not self.__bDescSift):
-                desc = descriptor_distribution[0][:, int(xs[kptNo]), int(ys[kptNo])]
+                desc = descriptor_distribution[0][:, int(xs[kptNo]/8), int(ys[kptNo]/8)]
                 vDesc.append(desc)
             vKpt_tmp = cv2.KeyPoint(int(ys[kptNo]), int(xs[kptNo]), 5.0)
             vKpt.append(vKpt_tmp)
-        if(self.__bDescSift): _, vDesc = self.__oSift.compute(self.__ImageOriginal, vKpt)
         vDesc = np.array(vDesc)
 
         oHeatmap = ((heatmap - np.min(heatmap)) * 255 / (np.max(heatmap) - np.min(heatmap))).astype(np.uint8)

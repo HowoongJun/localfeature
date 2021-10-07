@@ -1,5 +1,5 @@
 import torch
-import localfeature_ref.superpoint.nets as nets
+import model.superpoint.nets as nets
 import numpy as np
 
 class SuperPointFrontend(object):

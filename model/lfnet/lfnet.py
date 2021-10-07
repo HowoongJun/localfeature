@@ -2,7 +2,7 @@ from common.Log import DebugPrint
 from lcore.hal import *
 import numpy as np
 import cv2
-from localfeature_ref.lfnet.run_lfnet import *
+from model.lfnet.run_lfnet import *
 
 class CModel(CVisualLocalizationCore):
     def __init__(self):

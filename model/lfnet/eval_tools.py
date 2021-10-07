@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 import scipy
 
-import localfeature_ref.lfnet.utils
+import model.lfnet.utils
 
 def compute_various_matching_score(match_dist_all, kpvis2w, dist_thresh_list):
     assert len(match_dist_all) == len(kpvis2w)

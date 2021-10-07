@@ -1,7 +1,7 @@
 import tensorflow as tf
-from localfeature_ref.lfnet.det_tools import *
-from localfeature_ref.lfnet.spatial_transformer import transformer_crop
-from localfeature_ref.lfnet.utils import embed_breakpoint
+from model.lfnet.det_tools import *
+from model.lfnet.spatial_transformer import transformer_crop
+from model.lfnet.utils import embed_breakpoint
 
 
 def build_deep_detector(config, detector, photos, reuse=False, name='DeepDet'):

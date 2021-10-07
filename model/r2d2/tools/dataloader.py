@@ -9,8 +9,8 @@ import numpy as np
 import torch
 import torchvision.transforms as tvf
 
-from localfeature_ref.r2d2.tools.transforms import instanciate_transformation
-from localfeature_ref.r2d2.tools.transforms_tools import persp_apply
+from model.r2d2.tools.transforms import instanciate_transformation
+from model.r2d2.tools.transforms_tools import persp_apply
 
 
 RGB_mean = [0.485, 0.456, 0.406]
