@@ -82,8 +82,6 @@ def queryCheck(oModel):
         vKpt, vDesc, oHeatmap, fTime = oEvaluation.Query(fileIdx, args.width, args.height)
         uCount += 1
         fTotalTime += fTime
-        if(args.model == "eventpointnet" or args.model == "superpoint"):
-            cv2.imwrite("./result/Heatmap_" + str(args.model) + "_" + str(os.path.basename(args.query)), oHeatmap)
     log.DebugPrint().info("========= Result of " + str(args.model) + "==========")
     log.DebugPrint().info("Total Time: " + str(fTotalTime))
     log.DebugPrint().info("Average Time: " + str(fTotalTime / uCount))
@@ -127,35 +125,29 @@ def slam(oModel):
     vResultPath = args.query.split(os.path.sep)
     oDraw = draw.CDraw(args.model, vResultPath[-3])
     oEvaluation = CEvaluateLocalFeature(oModel, args.model)
+    
     vTrans = np.array([0, 0, 0])
     vRot = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
     vPoseDraw = [vTrans.tolist()]
     oKitti = CKitti(vResultPath[-3])
     vGTPose = oKitti.getPose()
     vCalib = oKitti.getCalib()
-    vRPE = []
-    vATE = []
+    vRPE, vATE = [], []
     uStep = 1
     fInitTime = time.time()
     for i in range(0,len(queryFiles) - 1, uStep):
         log.DebugPrint().info(os.path.basename(queryFiles[i]) + " and " + os.path.basename(queryFiles[i + uStep]))
-        vPrevRot = vRot
-        vPrevTrans = vTrans
+        vPrevRot, vPrevTrans = vRot, vTrans
 
         fGTScale = np.linalg.norm(vGTPose[i][:,3] - vGTPose[i+1][:, 3])
-        vRot, vTrans = oEvaluation.SLAM(queryFiles[i], queryFiles[i + uStep], vRot, vTrans, vCalib, scale = fGTScale, width=args.width, height=args.height, ransac=args.ransac)
-        vTrans[1] = 0
-        vPrevEstm = np.hstack((vPrevRot, np.expand_dims(vPrevTrans, axis=1)))
-        vPrevEstm = np.vstack((vPrevEstm, [0, 0, 0, 1]))
-        vEstm = np.hstack((vRot, np.expand_dims(vTrans, axis=1)))
-        vEstm = np.vstack((vEstm, [0, 0, 0, 1]))
+        vPrevEstm, vEstm = oEvaluation.SLAM(queryFiles[i], queryFiles[i + uStep], vRot, vTrans, vCalib, scale = fGTScale, width=args.width, height=args.height, ransac=args.ransac)
         
-        mRPE = np.linalg.inv(np.linalg.inv(vGTPose[i]).dot(vGTPose[i+1])).dot(np.linalg.inv(vPrevEstm).dot(vEstm))
-        mATE = np.linalg.inv(vGTPose[i+1]).dot(vEstm)
+        mRPE = oEvaluation.GetRPE(vGTPose[i], vGTPose[i+1], vPrevEstm, vEstm)
+        mATE = oEvaluation.GetATE(vGTPose[i+1], vEstm)
         vRPE.append(mRPE[:, 3])
         vATE.append(mATE[:, 3])
         vPoseDraw.append(vTrans.tolist())
-        
+
         if(i % 100 == 0):
             oDraw.draw2D(vPoseDraw)
     log.DebugPrint().info("Total Time: " + str(time.time() - fInitTime))
@@ -173,30 +165,20 @@ def hpatches(oModel):
         return False
     strHpatchesList = os.listdir(args.query)
     oEvaluation = CEvaluateLocalFeature(oModel, args.model)
-    uCountIdx = 0
-    uCount_i = 0
-    uCount_v = 0
-    fTotalMScore = 0
-    fTotalRepeat = 0
-    f_iMScore = 0
-    f_vMScore = 0
-    f_iRepeat = 0
-    f_vRepeat = 0
-    fRecTime = 0
+
+    uCount_i, uCount_v = 0, 0
+    f_iMScore, f_vMScore = 0, 0
+    f_iRepeat, f_vRepeat = 0, 0
+    
     vResult = dict()
     vRepeatability = dict()
     for strHpatches in strHpatchesList:
         strHpatchesQueryList = readFolder(args.query + strHpatches + "/")
         query = args.query + strHpatches + "/1.ppm"
-        fOneMScore = 0
-        fOneRepeat = 0
-        # for query in strHpatchesQueryList:
+        fOneMScore, fOneRepeat = 0, 0
         for match in strHpatchesQueryList:
             if(query >= match): continue
             fMScore, fRepeatability = oEvaluation.HPatches(query, match, width=args.width, height=args.height, threshold=args.threshold, ransac=args.ransac)
-            uCountIdx += 1
-            fTotalMScore += fMScore
-            fTotalRepeat += fRepeatability
             fOneMScore += fMScore
             fOneRepeat += fRepeatability
             if(strHpatches[0] == 'i'):
@@ -210,14 +192,15 @@ def hpatches(oModel):
         vRepeatability[strHpatches] = fOneRepeat / (len(strHpatchesQueryList) - 1)
         vResult[strHpatches] = fOneMScore / (len(strHpatchesQueryList) - 1)
         log.DebugPrint().info(vResult[strHpatches])
+        
     np.save('./result/HPATCHES_' + str(args.model), vResult)
     np.save('./result/HPATCHES_REPEAT_' + str(args.model), vRepeatability)
     log.DebugPrint().info("================= Result of " + str(args.model) + "=========================")
-    log.DebugPrint().info("Matching Score Total: " + str(fTotalMScore / uCountIdx))
+    log.DebugPrint().info("Matching Score Total: " + str((f_iMScore + f_vMScore) / (uCount_i + uCount_v)))
     log.DebugPrint().info("Matching Score Illumination: " + str(f_iMScore / uCount_i))
     log.DebugPrint().info("Matching Score Viewpoint: " + str(f_vMScore / uCount_v))
     log.DebugPrint().info(" ******** ")
-    log.DebugPrint().info("Repeatability Total: " + str(fTotalRepeat / uCountIdx))
+    log.DebugPrint().info("Repeatability Total: " + str((f_iRepeat + f_vRepeat) / (uCount_i + uCount_v)))
     log.DebugPrint().info("Repeatability Illumination: " + str(f_iRepeat / uCount_i))
     log.DebugPrint().info("Repeatability Viewpoint: " + str(f_vRepeat / uCount_v))
 

@@ -59,6 +59,9 @@ class CEvaluateLocalFeature():
             os.makedirs(strResultPath)
         vImageName = os.path.splitext(os.path.basename(image_path))
         oKptHandler.Save(strResultPath + "/KptResult_" + vImageName[0] + "_" + self.__strModel + vImageName[1])
+        
+        cv2.imwrite(strResultPath + "/Heatmap_" + self.__strModel + "_" + str(vResultPath) + ".png", oHeatmap)
+
         oKptHandler.Reset()
         self.__oModel.Reset()
         return vKpt, vDesc, oHeatmap, fSaveTime
@@ -146,8 +149,24 @@ class CEvaluateLocalFeature():
             vCurrentT = vNormalizedT * scale
         else:
             vCurrentT = T[:, 0]
-        return prevR.dot(R), prevT + prevR.dot(vCurrentT)
+
+        vRot, vTrans = prevR.dot(R), prevT + prevR.dot(vCurrentT)
+        vTrans[1] = 0
+        vPrevEstm = np.hstack((prevR, np.expand_dims(prevT, axis=1)))
+        vPrevEstm = np.vstack((vPrevEstm, [0, 0, 0, 1]))
+        vEstm = np.hstack((vRot, np.expand_dims(vTrans, axis=1)))
+        vEstm = np.vstack((vEstm, [0, 0, 0, 1]))
         
+        return vPrevEstm, vEstm
+    
+    def GetRPE(self, gt_pose, next_gt_pose, prev_estimation, curr_estimation):
+        mRPE =  np.linalg.inv(np.linalg.inv(gt_pose).dot(next_gt_pose)).dot(np.linalg.inv(prev_estimation).dot(curr_estimation))
+        return mRPE
+
+    def GetATE(self, gt_pose, estimation):
+        mATE = np.linalg.inv(gt_pose).dot(estimation)
+        return mATE
+
     def HPatches(self, query_path, match_path, width = None, height = None, threshold=3000, ransac=100.0):
         if(self.__oModel == None):
             DebugPrint().error("Model is None")
